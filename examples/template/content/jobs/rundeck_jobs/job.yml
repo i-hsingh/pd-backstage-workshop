@@ -1,0 +1,98 @@
+- defaultTab: output
+  description: |
+    Create a project based on specific file import.
+
+    This job will escape the project name for `@` and `.` characters with `_` (underscore) so the project name created is Rundeck allowed.
+    It will then search a local folder for job files matching the project name in the filename, and import each one.
+  executionEnabled: true
+  group: Projects
+  id: 08ced85e-b0f5-4a7b-bbf0-5a91273f9355
+  loglevel: DEBUG
+  name: Create Workshop Project for User
+  nodeFilterEditable: false
+  nodefilters:
+    dispatch:
+      excludePrecedence: true
+      keepgoing: false
+      rankOrder: ascending
+      successOnEmptyNodeFilter: false
+      threadcount: '1'
+    filter: 'name: MAIN '
+  nodesSelectedByDefault: true
+  options:
+  - label: Project Name
+    name: project-name
+    required: true
+  - hidden: true
+    name: dest-api-key
+    required: true
+    secure: true
+    storagePath: keys/project/workshop-manager/dest-server-api-key
+    valueExposed: true
+  - name: local-jobs-folder
+    required: true
+    value: ./jobs
+  plugins:
+    ExecutionLifecycle: {}
+  runnerSelector:
+    filter: BUILDER
+    runnerFilterMode: TAGS
+    runnerFilterType: TAG_FILTER_AND
+  scheduleEnabled: true
+  schedules: []
+  sequence:
+    commands:
+    - plugins:
+        LogFilter:
+        - config:
+            invalidKeyPattern: \s|\$|\{|\}|\\
+            logData: 'true'
+            name: project-name
+            regex: ^(.+)$
+          type: key-value-data
+      script: |+
+        projectName=$(echo "@option.project-name@" | sed 's/[@.]/_/g')
+        jobsFolder="@option.local-jobs-folder@"
+
+        echo "Escaped project name: $projectName"
+        echo "Searching for job files in $jobsFolder matching: $projectName"
+
+        # Find all files in the jobs folder that contain the project name
+        matchingFiles=$(find "$jobsFolder" -type f -name "*$projectName*.rdjob.xml")
+
+        if [ -z "$matchingFiles" ]; then
+          echo "No job files found for project $projectName in $jobsFolder"
+          exit 1
+        fi
+
+        echo "Creating project $projectName"
+        createProject=$(curl -sS --request POST '@globals.dest-server@/api/@globals.dest-api-version@/projects' \
+          --header 'X-Rundeck-Auth-Token: @option.dest-api-key@' \
+          --header 'Content-Type: application/json' \
+          --data-raw '{ "name": "'$projectName'"}')
+
+        echo "$createProject"
+        echo
+
+        # Import each matching job file
+        for jobFile in $matchingFiles; do
+          echo "Importing job file: $jobFile"
+          importResult=$(curl -sS --request POST '@globals.dest-server@/api/@globals.dest-api-version@/project/'$projectName'/jobs/import' \
+            --header 'X-Rundeck-Auth-Token: @option.dest-api-key@' \
+            --header 'Content-Type: application/xml' \
+            --form "xmlBatch=@$jobFile")
+          echo "$importResult"
+        done
+
+        # Optionally update the project label
+        updateLabel=$(curl -sS --request PUT '@globals.dest-server@/api/@globals.dest-api-version@/project/'$projectName'/config' \
+          --header 'X-Rundeck-Auth-Token: @option.dest-api-key@' \
+          --header 'Content-Type: application/json' \
+          --data '{"project.label":"@option.project-name@"}')
+
+        echo
+        echo "$updateLabel"
+    keepgoing: false
+    strategy: node-first
+  tags: projects
+  uuid: 08ced85e-b0f5-4a7b-bbf0-5a91273f9355

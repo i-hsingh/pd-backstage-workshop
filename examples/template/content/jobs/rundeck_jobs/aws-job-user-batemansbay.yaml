@@ -1,0 +1,894 @@
+- defaultTab: nodes
+  description: 'Deploy AWS EC2 resources with configurable parameters including AMI,
+    instance type, TTL, and user tagging'
+  executionEnabled: true
+  group: Backstage
+  id: aws-provisioning-user-batemansbay
+  loglevel: INFO
+  name: Deploy AWS Resources
+  nodeFilterEditable: false
+  nodefilters:
+    dispatch:
+      excludePrecedence: true
+      keepgoing: false
+      rankOrder: ascending
+      successOnEmptyNodeFilter: false
+      threadcount: '1'
+    filter: PDOT.*
+  nodesSelectedByDefault: true
+  options:
+  - description: Target environment for deployment
+    enforced: true
+    name: ENV
+    required: true
+    values:
+    - dev
+    - staging
+    - prod
+    valuesListDelimiter: ','
+  - description: Target AWS region
+    enforced: true
+    name: REGION
+    required: true
+    values:
+    - us-east-1
+    - us-west-2
+    - eu-west-1
+    valuesListDelimiter: ','
+  - description: Amazon Machine Image ID to deploy
+    name: AMI
+    required: true
+    value: ami-05b10e08d247fb927
+  - description: Time to live in days before auto-deletion
+    enforced: true
+    name: TTL
+    required: true
+    value: '7'
+    values:
+    - '7'
+    - '14'
+    - '30'
+    valuesListDelimiter: ','
+  - description: Custom tag to identify resource owner
+    name: USER_TAG
+    required: true
+    value: guest
+  - description: AWS EC2 instance type
+    enforced: true
+    name: INSTANCE_TYPE
+    required: true
+    value: t2.micro
+    values:
+    - t2.micro
+    - t2.small
+    - t2.medium
+    - t3.micro
+    - t3.small
+    - t3.medium
+    valuesListDelimiter: ','
+  orchestrator:
+    configuration:
+      count: '1'
+    type: subset
+  plugins:
+    ExecutionLifecycle: {}
+  scheduleEnabled: true
+  schedules: []
+  sequence:
+    commands:
+    - autoSecureInput: 'false'
+      description: Initialize AWS Deployment Job
+      passSecureInput: 'false'
+      script: |
+        #!/bin/bash
+        # 01-initialize-job.sh
+        # Initialize AWS Deployment Job with parameters
+
+        ENV=@option.ENV@
+        REGION=@option.REGION@
+        AMI=@option.AMI@
+        INSTANCE_TYPE=@option.INSTANCE_TYPE@
+        TTL=@option.TTL@
+        USER_TAG=@option.USER_TAG@
+
+        echo "===== AWS Resource Deployment Job Started ====="
+        echo "Job ID: aws-provisioning-user-batemansbay"
+        echo "Timestamp: $(date)"
+        echo "Execution ID: ${RD_JOB_EXECID:-Unknown}"
+        echo "================================================="
+        echo ""
+        echo "Deployment Parameters:"
+        echo "  Environment: $ENV"
+        echo "  Region: $REGION"
+        echo "  AMI: $AMI"
+        echo "  Instance Type: $INSTANCE_TYPE"
+        echo "  TTL: $TTL days"
+        echo "  User Tag: $USER_TAG"
+        echo ""
+        echo "✓ Job initialization completed successfully"
+    - autoSecureInput: 'false'
+      description: Validate Deployment Parameters
+      passSecureInput: 'false'
+      script: |
+        #!/bin/bash
+        # 02-validate-parameters.sh
+        # Validate all deployment parameters
+
+        ENV=@option.ENV@
+        REGION=@option.REGION@
+        AMI=@option.AMI@
+        INSTANCE_TYPE=@option.INSTANCE_TYPE@
+        TTL=@option.TTL@
+        USER_TAG=@option.USER_TAG@
+
+        echo "===== Parameter Validation ====="
+
+        # Validate required parameters
+        if [ -z "$ENV" ]; then
+          echo "ERROR: Environment parameter is missing!"
+          exit 1
+        fi
+
+        if [ -z "$REGION" ]; then
+          echo "ERROR: Region parameter is missing!"
+          exit 1
+        fi
+
+        if [ -z "$AMI" ]; then
+          echo "ERROR: AMI parameter is missing!"
+          exit 1
+        fi
+
+        if [ -z "$INSTANCE_TYPE" ]; then
+          echo "ERROR: Instance Type parameter is missing!"
+          exit 1
+        fi
+
+        if [ -z "$TTL" ]; then
+          echo "ERROR: TTL parameter is missing!"
+          exit 1
+        fi
+
+        if [ -z "$USER_TAG" ]; then
+          echo "ERROR: User Tag parameter is missing!"
+          exit 1
+        fi
+
+        # Validate environment values
+        case "$ENV" in
+          dev|staging|prod)
+            echo "✓ Environment '$ENV' is valid"
+            ;;
+          *)
+            echo "ERROR: Invalid environment '$ENV'. Must be dev, staging, or prod"
+            exit 1
+            ;;
+        esac
+
+        # Validate region values
+        case "$REGION" in
+          us-east-1|us-west-2|eu-west-1)
+            echo "✓ Region '$REGION' is valid"
+            ;;
+          *)
+            echo "ERROR: Invalid region '$REGION'"
+            exit 1
+            ;;
+        esac
+
+        # Validate TTL values
+        case "$TTL" in
+          7|14|30)
+            echo "✓ TTL '$TTL days' is valid"
+            ;;
+          *)
+            echo "ERROR: Invalid TTL '$TTL'. Must be 7, 14, or 30 days"
+            exit 1
+            ;;
+        esac
+
+        # Validate instance type
+        case "$INSTANCE_TYPE" in
+          t2.micro|t2.small|t2.medium|t3.micro|t3.small|t3.medium)
+            echo "✓ Instance type '$INSTANCE_TYPE' is valid"
+            ;;
+          *)
+            echo "ERROR: Invalid instance type '$INSTANCE_TYPE'"
+            exit 1
+            ;;
+        esac
+
+        # Validate AMI format
+        if [[ ! "$AMI" =~ ^ami-[0-9a-f]{8,17}$ ]]; then
+          echo "WARNING: AMI '$AMI' format may be invalid (expected ami-xxxxxxxx)"
+        else
+          echo "✓ AMI format is valid"
+        fi
+
+        echo "✓ All parameters validated successfully"
+        echo "================================="
+    - autoSecureInput: 'false'
+      description: Authenticate with AWS
+      passSecureInput: 'false'
+      script: |
+        #!/bin/bash
+        # 03-aws-authentication.sh
+        # Simulate AWS authentication and credential setup
+
+        ENV=@option.ENV@
+        REGION=@option.REGION@
+        AMI=@option.AMI@
+        INSTANCE_TYPE=@option.INSTANCE_TYPE@
+        TTL=@option.TTL@
+        USER_TAG=@option.USER_TAG@
+
+        echo "===== AWS Authentication ====="
+        echo "Configuring AWS credentials for region: $REGION"
+
+        # Simulate AWS CLI configuration
+        echo "Setting up AWS CLI profile..."
+        sleep 1
+
+        # Check if AWS CLI would be available
+        echo "Checking AWS CLI availability..."
+        if command -v aws >/dev/null 2>&1; then
+          echo "✓ AWS CLI is available"
+        else
+          echo "⚠ AWS CLI not found (simulating installation)"
+        fi
+
+        # Simulate credential validation
+        echo "Validating AWS credentials..."
+        sleep 1
+        echo "✓ AWS credentials validated"
+
+        # Simulate region configuration
+        echo "Setting default region to: $REGION"
+        echo "✓ AWS region configured"
+
+        # Simulate STS token validation
+        echo "Validating STS token..."
+        ACCOUNT_ID="$(shuf -i 100000000000-999999999999 -n 1)"
+        echo "✓ Connected to AWS Account: $ACCOUNT_ID"
+
+        echo "✓ AWS authentication successful"
+        echo "✓ Ready to deploy resources in region: $REGION"
+        echo "==============================="
+    - autoSecureInput: 'false'
+      description: Pre-deployment Validation
+      passSecureInput: 'false'
+      script: |
+        #!/bin/bash
+        # 04-pre-deployment-checks.sh
+        # Perform pre-deployment validation checks
+
+        ENV=@option.ENV@
+        REGION=@option.REGION@
+        AMI=@option.AMI@
+        INSTANCE_TYPE=@option.INSTANCE_TYPE@
+        TTL=@option.TTL@
+        USER_TAG=@option.USER_TAG@
+
+        echo "===== Pre-deployment Checks ====="
+
+        # Simulate AMI availability check
+        echo "Checking AMI availability: $AMI in $REGION"
+        sleep 1
+
+        # Simulate AMI validation
+        case "$REGION" in
+          us-east-1)
+            echo "✓ AMI $AMI is available in $REGION"
+            echo "  - AMI Name: Ubuntu Server 20.04 LTS"
+            echo "  - Architecture: x86_64"
+            echo "  - Virtualization: hvm"
+            ;;
+          us-west-2)
+            echo "✓ AMI $AMI is available in $REGION"
+            echo "  - AMI Name: Ubuntu Server 20.04 LTS"
+            echo "  - Architecture: x86_64"
+            echo "  - Virtualization: hvm"
+            ;;
+          eu-west-1)
+            echo "✓ AMI $AMI is available in $REGION"
+            echo "  - AMI Name: Ubuntu Server 20.04 LTS"
+            echo "  - Architecture: x86_64"
+            echo "  - Virtualization: hvm"
+            ;;
+        esac
+
+        # Simulate instance type validation
+        echo "Validating instance type: $INSTANCE_TYPE"
+        sleep 1
+        echo "✓ Instance type $INSTANCE_TYPE is supported in $REGION"
+
+        # Simulate resource quota checks
+        echo "Checking resource quotas and limits..."
+        sleep 1
+        echo "✓ EC2 instance quota: Available"
+        echo "✓ VPC limits: Within bounds"
+        echo "✓ Security group limits: Available"
+        echo "✓ EBS volume limits: Available"
+
+        # Simulate network availability
+        echo "Checking network resources..."
+        VPC_ID="vpc-$(openssl rand -hex 8)"
+        SUBNET_ID="subnet-$(openssl rand -hex 8)"
+        echo "✓ Default VPC available: $VPC_ID"
+        echo "✓ Default subnet available: $SUBNET_ID"
+
+        echo "✓ All pre-deployment checks passed"
+        echo "=================================="
+    - autoSecureInput: 'false'
+      description: Create EC2 Instance
+      passSecureInput: 'false'
+      script: |
+        #!/bin/bash
+        # 05-create-ec2-instance.sh
+        # Simulate EC2 instance creation
+
+        ENV=@option.ENV@
+        REGION=@option.REGION@
+        AMI=@option.AMI@
+        INSTANCE_TYPE=@option.INSTANCE_TYPE@
+        TTL=@option.TTL@
+        USER_TAG=@option.USER_TAG@
+
+        echo "===== EC2 Instance Creation ====="
+        echo "Creating EC2 instance with specifications:"
+        echo "  AMI: $AMI"
+        echo "  Instance Type: $INSTANCE_TYPE"
+        echo "  Region: $REGION"
+        echo "  Environment: $ENV"
+        echo ""
+
+        # Simulate instance launch
+        echo "Launching EC2 instance..."
+        sleep 2
+
+        # Generate simulated instance details
+        INSTANCE_ID="i-$(openssl rand -hex 8)"
+        PLACEMENT_AZ="${REGION}a"
+
+        echo "✓ Instance launch initiated"
+        echo "✓ Instance ID: $INSTANCE_ID"
+        echo "✓ Placement AZ: $PLACEMENT_AZ"
+
+        # Simulate instance state transitions
+        echo ""
+        echo "Instance state transitions:"
+        echo "  pending -> initializing..."
+        sleep 1
+        echo "  initializing -> running..."
+        sleep 2
+        echo "✓ Instance state: running"
+
+        # Generate network details
+        PRIVATE_IP="10.0.$(shuf -i 1-254 -n 1).$(shuf -i 1-254 -n 1)"
+        PUBLIC_IP="$(shuf -i 1-254 -n 1).$(shuf -i 1-254 -n 1).$(shuf -i 1-254 -n 1).$(shuf -i 1-254 -n 1)"
+
+        echo ""
+        echo "Network configuration:"
+        echo "  Private IP: $PRIVATE_IP"
+        echo "  Public IP: $PUBLIC_IP"
+        echo "  VPC: vpc-$(openssl rand -hex 8)"
+        echo "  Subnet: subnet-$(openssl rand -hex 8)"
+
+        # Store instance details for later steps
+        echo "export INSTANCE_ID='$INSTANCE_ID'" > /tmp/instance_details.env
+        echo "export PRIVATE_IP='$PRIVATE_IP'" >> /tmp/instance_details.env
+        echo "export PUBLIC_IP='$PUBLIC_IP'" >> /tmp/instance_details.env
+        echo "export PLACEMENT_AZ='$PLACEMENT_AZ'" >> /tmp/instance_details.env
+
+        echo ""
+        echo "✓ EC2 instance created successfully"
+        echo "================================="
+    - autoSecureInput: 'false'
+      description: Apply Resource Tags
+      passSecureInput: 'false'
+      script: |
+        #!/bin/bash
+        # 06-apply-tags.sh
+        # Apply tags to the created EC2 instance
+
+        ENV=@option.ENV@
+        REGION=@option.REGION@
+        AMI=@option.AMI@
+        INSTANCE_TYPE=@option.INSTANCE_TYPE@
+        TTL=@option.TTL@
+        USER_TAG=@option.USER_TAG@
+
+        # Load instance details from previous step
+        if [ -f /tmp/instance_details.env ]; then
+          source /tmp/instance_details.env
+        else
+          INSTANCE_ID="i-$(openssl rand -hex 8)"
+        fi
+
+        echo "===== Resource Tagging ====="
+        echo "Applying tags to instance: $INSTANCE_ID"
+        echo ""
+
+        # Define tags
+        CREATION_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+        DELETION_DATE=$(date -u -d "+${TTL} days" +%Y-%m-%dT%H:%M:%SZ)
+
+        echo "Applying the following tags:"
+        echo "  Name: ${ENV}-instance-${USER_TAG}"
+        echo "  Environment: $ENV"
+        echo "  Owner: $USER_TAG"
+        echo "  TTL: $TTL"
+        echo "  CreatedBy: Rundeck-Backstage"
+        echo "  CreatedAt: $CREATION_DATE"
+        echo "  DeleteAfter: $DELETION_DATE"
+        echo "  Project: AWS-Deployment"
+        echo "  ManagedBy: Rundeck"
+
+        # Simulate tag application
+        sleep 1
+        echo ""
+        echo "✓ Name tag applied"
+        echo "✓ Environment tag applied"
+        echo "✓ Owner tag applied"
+        echo "✓ TTL tag applied"
+        echo "✓ Metadata tags applied"
+        echo "✓ Management tags applied"
+
+        # Update instance details with tags
+        echo "export INSTANCE_NAME='${ENV}-instance-${USER_TAG}'" >> /tmp/instance_details.env
+        echo "export CREATION_DATE='$CREATION_DATE'" >> /tmp/instance_details.env
+        echo "export DELETION_DATE='$DELETION_DATE'" >> /tmp/instance_details.env
+
+        echo ""
+        echo "✓ All tags applied successfully"
+        echo "============================="
+    - autoSecureInput: 'false'
+      description: Configure Security Groups
+      passSecureInput: 'false'
+      script: |
+        #!/bin/bash
+        # 07-configure-security-groups.sh
+        # Configure security groups for the EC2 instance
+
+        ENV=@option.ENV@
+        REGION=@option.REGION@
+        AMI=@option.AMI@
+        INSTANCE_TYPE=@option.INSTANCE_TYPE@
+        TTL=@option.TTL@
+        USER_TAG=@option.USER_TAG@
+
+        # Load instance details
+        if [ -f /tmp/instance_details.env ]; then
+          source /tmp/instance_details.env
+        fi
+
+        echo "===== Security Group Configuration ====="
+
+        # Generate security group details
+        SG_NAME="${ENV}-sg-${USER_TAG}"
+        SG_ID="sg-$(openssl rand -hex 8)"
+        VPC_ID="vpc-$(openssl rand -hex 8)"
+
+        echo "Creating security group: $SG_NAME"
+        echo "Security Group ID: $SG_ID"
+        echo "VPC: $VPC_ID"
+        echo ""
+
+        # Simulate security group creation
+        echo "Configuring inbound rules:"
+        sleep 1
+
+        # SSH access
+        echo "  ✓ SSH (22/tcp): 0.0.0.0/0"
+        echo "    - Description: SSH access for administration"
+
+        # HTTP access
+        echo "  ✓ HTTP (80/tcp): 0.0.0.0/0"
+        echo "    - Description: HTTP web traffic"
+
+        # HTTPS access
+        echo "  ✓ HTTPS (443/tcp): 0.0.0.0/0"
+        echo "    - Description: HTTPS web traffic"
+
+        # Custom application port (if needed)
+        case "$ENV" in
+          dev)
+            echo "  ✓ Custom (8080/tcp): 0.0.0.0/0"
+            echo "    - Description: Development server port"
+            ;;
+          staging)
+            echo "  ✓ Custom (8080/tcp): 10.0.0.0/8"
+            echo "    - Description: Staging server port (internal only)"
+            ;;
+          prod)
+            echo "  ✓ Custom (8080/tcp): 10.0.0.0/8"
+            echo "    - Description: Production server port (internal only)"
+            ;;
+        esac
+
+        echo ""
+        echo "Configuring outbound rules:"
+        echo "  ✓ All traffic (0-65535): 0.0.0.0/0"
+        echo "    - Description: Allow all outbound traffic"
+
+        # Simulate attaching security group to instance
+        echo ""
+        echo "Attaching security group to instance..."
+        sleep 1
+        echo "✓ Security group attached to instance: $INSTANCE_ID"
+
+        # Store security group details
+        echo "export SG_ID='$SG_ID'" >> /tmp/instance_details.env
+        echo "export SG_NAME='$SG_NAME'" >> /tmp/instance_details.env
+
+        echo ""
+        echo "✓ Security group configuration completed"
+        echo "========================================"
+    - autoSecureInput: 'false'
+      description: Schedule TTL Auto-deletion
+      passSecureInput: 'false'
+      script: |
+        #!/bin/bash
+        # 08-schedule-ttl-deletion.sh
+        # Schedule automatic deletion based on TTL
+
+        ENV=@option.ENV@
+        REGION=@option.REGION@
+        AMI=@option.AMI@
+        INSTANCE_TYPE=@option.INSTANCE_TYPE@
+        TTL=@option.TTL@
+        USER_TAG=@option.USER_TAG@
+
+        # Load instance details
+        if [ -f /tmp/instance_details.env ]; then
+          source /tmp/instance_details.env
+        fi
+
+        echo "===== TTL Auto-deletion Setup ====="
+
+        # Calculate deletion date
+        DELETION_DATE=$(date -d "+${TTL} days" +%Y-%m-%d)
+        DELETION_TIMESTAMP=$(date -d "+${TTL} days" +%s)
+
+        echo "Setting up auto-deletion for TTL: $TTL days"
+        echo "Current date: $(date +%Y-%m-%d)"
+        echo "Scheduled deletion date: $DELETION_DATE"
+        echo ""
+
+        # Simulate CloudWatch Events rule creation
+        RULE_NAME="auto-delete-${INSTANCE_ID}"
+        echo "Creating CloudWatch Events rule: $RULE_NAME"
+        sleep 1
+
+        echo "✓ CloudWatch Events rule created"
+        echo "  - Rule Name: $RULE_NAME"
+        echo "  - Schedule: rate($TTL days)"
+        echo "  - Target: Lambda function (instance-cleanup)"
+
+        # Simulate Lambda function setup
+        echo ""
+        echo "Configuring Lambda function for cleanup:"
+        echo "✓ Function: aws-instance-cleanup"
+        echo "✓ Runtime: python3.9"
+        echo "✓ Timeout: 60 seconds"
+        echo "✓ Permissions: EC2 terminate instances"
+
+        # Simulate SNS notification setup
+        echo ""
+        echo "Setting up deletion notifications:"
+        TOPIC_ARN="arn:aws:sns:${REGION}:123456789012:instance-cleanup"
+        echo "✓ SNS Topic: $TOPIC_ARN"
+        echo "✓ Notification: 24 hours before deletion"
+        echo "✓ Notification: 1 hour before deletion"
+
+        # Create cleanup script
+        echo ""
+        echo "Generating cleanup metadata:"
+        cat > /tmp/cleanup_schedule.json << 'EOF'
+        {
+          "instance_id": "$INSTANCE_ID",
+          "deletion_date": "$DELETION_DATE",
+          "deletion_timestamp": $DELETION_TIMESTAMP,
+          "ttl_days": $TTL,
+          "owner": "$USER_TAG",
+          "environment": "$ENV",
+          "rule_name": "$RULE_NAME"
+        }
+        EOF
+
+        echo "✓ Cleanup metadata saved"
+        echo "✓ Auto-deletion scheduled successfully"
+        echo "⚠ Instance will be terminated on: $DELETION_DATE"
+        echo "=================================="
+    - description: Perform Health Checks
+      script: |
+        #!/bin/bash
+        # 09-health-checks.sh
+        # Perform comprehensive health checks on the instance
+
+        # Load instance details
+        if [ -f /tmp/instance_details.env ]; then
+          source /tmp/instance_details.env
+        else
+          INSTANCE_ID="i-$(openssl rand -hex 8)"
+          PUBLIC_IP="$(shuf -i 1-254 -n 1).$(shuf -i 1-254 -n 1).$(shuf -i 1-254 -n 1).$(shuf -i 1-254 -n 1)"
+        fi
+
+        echo "===== Instance Health Checks ====="
+        echo "Performing health checks for instance: $INSTANCE_ID"
+        echo ""
+
+        # Simulate waiting for instance to be ready
+        echo "Waiting for instance to be fully ready..."
+        for i in {1..5}; do
+          echo "  Check $i/5: Waiting..."
+          sleep 1
+        done
+
+        echo ""
+        echo "Running health checks:"
+
+        # Instance status check
+        echo "1. Instance Status Check:"
+        sleep 1
+        echo "   ✓ Instance Status: running"
+        echo "   ✓ Instance State: 16 (running)"
+
+        # System status check
+        echo ""
+        echo "2. System Status Check:"
+        sleep 1
+        echo "   ✓ System Status: ok"
+        echo "   ✓ System Reachability: passed"
+        echo "   ✓ Instance Reachability: passed"
+
+        # Network connectivity check
+        echo ""
+        echo "3. Network Connectivity:"
+        sleep 1
+        echo "   ✓ Private IP: $PRIVATE_IP (reachable)"
+        echo "   ✓ Public IP: $PUBLIC_IP (reachable)"
+        echo "   ✓ DNS Resolution: working"
+
+        # Security group validation
+        echo ""
+        echo "4. Security Group Validation:"
+        sleep 1
+        echo "   ✓ Security groups attached: $SG_ID"
+        echo "   ✓ SSH port (22): accessible"
+        echo "   ✓ HTTP port (80): accessible"
+        echo "   ✓ HTTPS port (443): accessible"
+
+        # Storage check
+        echo ""
+        echo "5. Storage Health:"
+        sleep 1
+        ROOT_VOLUME="vol-$(openssl rand -hex 8)"
+        echo "   ✓ Root volume: $ROOT_VOLUME (8 GB)"
+        echo "   ✓ Volume state: in-use"
+        echo "   ✓ Volume type: gp3"
+
+        # Performance metrics
+        echo ""
+        echo "6. Performance Metrics:"
+        sleep 1
+        CPU_UTIL=$(shuf -i 1-15 -n 1)
+        MEMORY_UTIL=$(shuf -i 10-30 -n 1)
+        echo "   ✓ CPU Utilization: ${CPU_UTIL}%"
+        echo "   ✓ Memory Utilization: ${MEMORY_UTIL}%"
+        echo "   ✓ Network In: 1.2 MB"
+        echo "   ✓ Network Out: 0.8 MB"
+
+        # Final health status
+        echo ""
+        echo "Health Check Summary:"
+        echo "✓ All health checks passed successfully"
+        echo "✓ Instance is ready for use"
+        echo "✓ No issues detected"
+        echo "=================================="
+      script-args: ''
+    - autoSecureInput: 'false'
+      description: Generate Deployment Summary
+      passSecureInput: 'false'
+      script: |
+        #!/bin/bash
+        # 10-deployment-summary.sh
+        # Generate comprehensive deployment summary
+
+        ENV=@option.ENV@
+        REGION=@option.REGION@
+        AMI=@option.AMI@
+        INSTANCE_TYPE=@option.INSTANCE_TYPE@
+        TTL=@option.TTL@
+        USER_TAG=@option.USER_TAG@
+
+        # Load instance details
+        if [ -f /tmp/instance_details.env ]; then
+          source /tmp/instance_details.env
+        else
+          # Fallback values if file doesn't exist
+          INSTANCE_ID="i-$(openssl rand -hex 8)"
+          PUBLIC_IP="$(shuf -i 1-254 -n 1).$(shuf -i 1-254 -n 1).$(shuf -i 1-254 -n 1).$(shuf -i 1-254 -n 1)"
+          PRIVATE_IP="10.0.$(shuf -i 1-254 -n 1).$(shuf -i 1-254 -n 1)"
+          INSTANCE_NAME="${ENV}-instance-${USER_TAG}"
+          SG_ID="sg-$(openssl rand -hex 8)"
+        fi
+
+        echo "===== Deployment Summary ====="
+        echo ""
+        echo "🎉 AWS EC2 Deployment Completed Successfully!"
+        echo ""
+
+        # Resource details section
+        echo "📋 Resource Details:"
+        echo "   Instance ID: $INSTANCE_ID"
+        echo "   Instance Name: $INSTANCE_NAME"
+        echo "   Instance Type: $INSTANCE_TYPE"
+        echo "   AMI: $AMI"
+        echo "   Region: $REGION"
+        echo "   Availability Zone: ${PLACEMENT_AZ:-${REGION}a}"
+        echo "   Environment: $ENV"
+        echo "   Owner: $USER_TAG"
+        echo ""
+
+        # Network information
+        echo "🌐 Network Information:"
+        echo "   Public IP: $PUBLIC_IP"
+        echo "   Private IP: $PRIVATE_IP"
+        echo "   Security Group: $SG_ID"
+        echo "   VPC: vpc-$(openssl rand -hex 8)"
+        echo ""
+
+        # Access information
+        echo "🔑 Access Information:"
+        echo "   SSH Command: ssh -i your-key.pem ec2-user@$PUBLIC_IP"
+        echo "   HTTP URL: http://$PUBLIC_IP"
+        echo "   HTTPS URL: https://$PUBLIC_IP"
+        echo "   AWS Console: https://${REGION}.console.aws.amazon.com/ec2/v2/home?region=${REGION}#Instances:instanceId=${INSTANCE_ID}"
+        echo ""
+
+        # Management information
+        echo "⏰ Management Information:"
+        echo "   TTL: $TTL days"
+        echo "   Created: ${CREATION_DATE:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}"
+        echo "   Auto-deletion: ${DELETION_DATE:-$(date -u -d "+${TTL} days" +%Y-%m-%dT%H:%M:%SZ)}"
+        echo "   Managed by: Rundeck-Backstage"
+        echo ""
+
+        # Cost estimation
+        echo "💰 Estimated Costs (USD/month):"
+        case "$INSTANCE_TYPE" in
+          t2.micro) COST="8.50" ;;
+          t2.small) COST="17.00" ;;
+          t2.medium) COST="34.00" ;;
+          t3.micro) COST="7.50" ;;
+          t3.small) COST="15.00" ;;
+          t3.medium) COST="30.00" ;;
+          *) COST="Unknown" ;;
+        esac
+        echo "   Instance Cost: \$${COST}"
+        echo "   Storage Cost: \$0.80 (8GB gp3)"
+        echo "   Data Transfer: \$0.00 (first 1GB free)"
+        echo ""
+
+        # Security summary
+        echo "🔒 Security Configuration:"
+        echo "   ✓ Security groups configured"
+        echo "   ✓ SSH access enabled"
+        echo "   ✓ HTTP/HTTPS ports open"
+        echo "   ✓ Outbound traffic allowed"
+        echo ""
+
+        # Monitoring and alerts
+        echo "📊 Monitoring & Alerts:"
+        echo "   ✓ CloudWatch monitoring enabled"
+        echo "   ✓ Basic metrics collection active"
+        echo "   ✓ Auto-deletion scheduled"
+        echo "   ✓ SNS notifications configured"
+        echo ""
+
+        # Next steps
+        echo "🚀 Next Steps:"
+        echo "   1. Verify SSH connectivity: ssh -i your-key.pem ec2-user@$PUBLIC_IP"
+        echo "   2. Install and configure your application"
+        echo "   3. Set up application-specific monitoring"
+        echo "   4. Configure backup strategies if needed"
+        echo "   5. Review security group rules for production use"
+        echo "   6. Set up DNS records if required"
+        echo ""
+
+        # Save deployment summary
+        cat > /tmp/deployment_summary.json << 'EOF'
+        {
+          "deployment_status": "SUCCESS",
+          "instance_id": "$INSTANCE_ID",
+          "instance_name": "$INSTANCE_NAME",
+          "public_ip": "$PUBLIC_IP",
+          "private_ip": "$PRIVATE_IP",
+          "instance_type": "$INSTANCE_TYPE",
+          "ami": "$AMI",
+          "region": "$REGION",
+          "environment": "$ENV",
+          "owner": "$USER_TAG",
+          "ttl_days": $TTL,
+          "security_group": "$SG_ID",
+          "estimated_monthly_cost": "$COST",
+          "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+          "console_url": "https://${REGION}.console.aws.amazon.com/ec2/v2/home?region=${REGION}#Instances:instanceId=${INSTANCE_ID}"
+        }
+        EOF
+
+        echo "✅ Deployment summary saved to /tmp/deployment_summary.json"
+        echo "✅ AWS EC2 deployment completed successfully!"
+        echo "=============================="
+    - autoSecureInput: 'false'
+      description: Job Completion
+      passSecureInput: 'false'
+      script: |
+        #!/bin/bash
+        # 11-job-completion.sh
+        # Final job completion and cleanup
+
+        echo "===== Job Completion ====="
+        echo ""
+
+        # Job execution details
+        echo "📊 Execution Details:"
+        echo "   Rundeck Job ID: aws-provisioning-user-batemansbay"
+        echo "   Execution ID: ${RD_JOB_EXECID:-Unknown}"
+        echo "   Execution Status: SUCCESS ✅"
+        echo "   Start Time: ${RD_JOB_STARTED:-Unknown}"
+        echo "   Completion Time: $(date)"
+        echo "   Total Duration: ${RD_JOB_EXECTIME:-Unknown}"
+        echo "   Executed by: ${RD_JOB_USERNAME:-System}"
+        echo ""
+
+        # Load final instance details
+        if [ -f /tmp/instance_details.env ]; then
+          source /tmp/instance_details.env
+          echo "🎯 Deployed Resources:"
+          echo "   ✅ EC2 Instance: $INSTANCE_ID"
+          echo "   ✅ Security Group: $SG_ID"
+          echo "   ✅ Resource Tags: Applied"
+          echo "   ✅ Auto-deletion: Scheduled"
+          echo "   ✅ Health Checks: Passed"
+        fi
+        echo ""
+
+        # Cleanup temporary files
+        echo "🧹 Cleanup Operations:"
+        if [ -f /tmp/instance_details.env ]; then
+          echo "   ✅ Instance details preserved"
+        fi
+
+        if [ -f /tmp/deployment_summary.json ]; then
+          echo "   ✅ Deployment summary saved"
+        fi
+
+        if [ -f /tmp/cleanup_schedule.json ]; then
+          echo "   ✅ Cleanup schedule configured"
+        fi
+        echo ""
+
+        # Final status
+        echo "🏁 Final Status:"
+        echo "   ✅ All deployment tasks completed successfully"
+        echo "   ✅ Instance is running and accessible"
+        echo "   ✅ Monitoring and cleanup configured"
+        echo "   ✅ Ready for application deployment"
+        echo ""
+
+        # Support information
+        echo "📞 Support Information:"
+        echo "   For issues with this deployment, contact:"
+        echo "   - Platform Team: platform@company.com"
+        echo "   - Rundeck Admin: rundeck-admin@company.com"
+        echo "   - AWS Support: aws-support@company.com"
+        echo ""
+
+        echo "🎉 Thank you for using Rundeck AWS Deployment!"
+        echo "=========================="
+    keepgoing: false
+    strategy: node-first
+  tags: 'automation,aws,backstage,deployment,ec2'
+  uuid: aws-provisioning-user-batemansbay

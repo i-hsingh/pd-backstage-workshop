@@ -1,0 +1,799 @@
+- defaultTab: nodes
+  description: Perform database backup and restore operations with configurable retention
+    policies and notification settings
+  executionEnabled: true
+  group: Backstage
+  id: db-backup-restore-young
+  loglevel: INFO
+  name: Database Backup and Restore
+  nodeFilterEditable: false
+  nodefilters:
+    dispatch:
+      excludePrecedence: true
+      keepgoing: false
+      rankOrder: ascending
+      successOnEmptyNodeFilter: false
+      threadcount: '1'
+    filter: PDOT.*
+  nodesSelectedByDefault: true
+  options:
+  - description: Target environment for the database operation
+    enforced: true
+    name: ENV
+    required: true
+    values:
+    - dev
+    - staging
+    - prod
+    valuesListDelimiter: ','
+  - description: Type of database to backup or restore
+    enforced: true
+    name: DB_TYPE
+    required: true
+    values:
+    - postgresql
+    - mysql
+    - mongodb
+    - redis
+    - elasticsearch
+    valuesListDelimiter: ','
+  - description: Type of database operation to perform
+    enforced: true
+    name: OPERATION
+    required: true
+    value: backup
+    values:
+    - backup
+    - restore
+    - backup-and-verify
+    valuesListDelimiter: ','
+  - description: Number of days to retain backup files
+    enforced: true
+    name: RETENTION_DAYS
+    required: true
+    value: '30'
+    values:
+    - '7'
+    - '30'
+    - '90'
+    - '365'
+    valuesListDelimiter: ','
+  - description: Storage location for backup files
+    enforced: true
+    name: BACKUP_LOCATION
+    required: true
+    value: s3-primary
+    values:
+    - s3-primary
+    - s3-secondary
+    - local-storage
+    - azure-blob
+    valuesListDelimiter: ','
+  - description: Email address for operation notifications
+    name: NOTIFICATION_EMAIL
+    required: true
+    value: admin@company.com
+  orchestrator:
+    configuration:
+      count: '1'
+    type: subset
+  plugins:
+    ExecutionLifecycle: {}
+  scheduleEnabled: true
+  schedules: []
+  sequence:
+    commands:
+    - autoSecureInput: 'false'
+      description: Initialize Database Operation Job
+      passSecureInput: 'false'
+      script: |
+        #!/bin/bash
+        # 01-initialize-db-job.sh
+        # Initialize Database Operation Job with parameters
+
+        ENV=@option.ENV@
+        DB_TYPE=@option.DB_TYPE@
+        OPERATION=@option.OPERATION@
+        RETENTION_DAYS=@option.RETENTION_DAYS@
+        BACKUP_LOCATION=@option.BACKUP_LOCATION@
+        NOTIFICATION_EMAIL=@option.NOTIFICATION_EMAIL@
+
+        echo "===== Database Operation Job Started ====="
+        echo "Job ID: db-backup-restore-young"
+        echo "Timestamp: $(date)"
+        echo "Execution ID: ${RD_JOB_EXECID:-Unknown}"
+        echo "============================================="
+        echo ""
+        echo "Operation Parameters:"
+        echo "  Environment: $ENV"
+        echo "  Database Type: $DB_TYPE"
+        echo "  Operation: $OPERATION"
+        echo "  Retention Days: $RETENTION_DAYS"
+        echo "  Backup Location: $BACKUP_LOCATION"
+        echo "  Notification Email: $NOTIFICATION_EMAIL"
+        echo ""
+        echo "✓ Job initialization completed successfully"
+    - autoSecureInput: 'false'
+      description: Validate Operation Parameters
+      passSecureInput: 'false'
+      script: |
+        #!/bin/bash
+        # 02-validate-db-parameters.sh
+        # Validate all database operation parameters
+
+        ENV=@option.ENV@
+        DB_TYPE=@option.DB_TYPE@
+        OPERATION=@option.OPERATION@
+        RETENTION_DAYS=@option.RETENTION_DAYS@
+        BACKUP_LOCATION=@option.BACKUP_LOCATION@
+        NOTIFICATION_EMAIL=@option.NOTIFICATION_EMAIL@
+
+        echo "===== Parameter Validation ====="
+
+        # Validate required parameters
+        if [ -z "$ENV" ]; then
+          echo "ERROR: Environment parameter is missing!"
+          exit 1
+        fi
+
+        if [ -z "$DB_TYPE" ]; then
+          echo "ERROR: Database Type parameter is missing!"
+          exit 1
+        fi
+
+        if [ -z "$OPERATION" ]; then
+          echo "ERROR: Operation parameter is missing!"
+          exit 1
+        fi
+
+        if [ -z "$RETENTION_DAYS" ]; then
+          echo "ERROR: Retention Days parameter is missing!"
+          exit 1
+        fi
+
+        if [ -z "$BACKUP_LOCATION" ]; then
+          echo "ERROR: Backup Location parameter is missing!"
+          exit 1
+        fi
+
+        if [ -z "$NOTIFICATION_EMAIL" ]; then
+          echo "ERROR: Notification Email parameter is missing!"
+          exit 1
+        fi
+
+        # Validate environment values
+        case "$ENV" in
+          dev|staging|prod)
+            echo "✓ Environment '$ENV' is valid"
+            ;;
+          *)
+            echo "ERROR: Invalid environment '$ENV'. Must be dev, staging, or prod"
+            exit 1
+            ;;
+        esac
+
+        # Validate database type
+        case "$DB_TYPE" in
+          postgresql|mysql|mongodb|redis|elasticsearch)
+            echo "✓ Database type '$DB_TYPE' is valid"
+            ;;
+          *)
+            echo "ERROR: Invalid database type '$DB_TYPE'"
+            exit 1
+            ;;
+        esac
+
+        # Validate operation type
+        case "$OPERATION" in
+          backup|restore|backup-and-verify)
+            echo "✓ Operation '$OPERATION' is valid"
+            ;;
+          *)
+            echo "ERROR: Invalid operation '$OPERATION'"
+            exit 1
+            ;;
+        esac
+
+        # Validate retention days
+        case "$RETENTION_DAYS" in
+          7|30|90|365)
+            echo "✓ Retention days '$RETENTION_DAYS' is valid"
+            ;;
+          *)
+            echo "ERROR: Invalid retention days '$RETENTION_DAYS'"
+            exit 1
+            ;;
+        esac
+
+        # Validate backup location
+        case "$BACKUP_LOCATION" in
+          s3-primary|s3-secondary|local-storage|azure-blob)
+            echo "✓ Backup location '$BACKUP_LOCATION' is valid"
+            ;;
+          *)
+            echo "ERROR: Invalid backup location '$BACKUP_LOCATION'"
+            exit 1
+            ;;
+        esac
+
+        # Validate email format
+        if [[ "$NOTIFICATION_EMAIL" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
+          echo "✓ Email format is valid"
+        else
+          echo "WARNING: Email format may be invalid"
+        fi
+
+        echo "✓ All parameters validated successfully"
+        echo "================================="
+    - autoSecureInput: 'false'
+      description: Setup Database Connection
+      passSecureInput: 'false'
+      script: |
+        #!/bin/bash
+        # 03-setup-db-connection.sh
+        # Setup database connection and authentication
+
+        ENV=@option.ENV@
+        DB_TYPE=@option.DB_TYPE@
+        OPERATION=@option.OPERATION@
+        RETENTION_DAYS=@option.RETENTION_DAYS@
+        BACKUP_LOCATION=@option.BACKUP_LOCATION@
+        NOTIFICATION_EMAIL=@option.NOTIFICATION_EMAIL@
+
+        echo "===== Database Connection Setup ====="
+        echo "Setting up connection for $DB_TYPE in $ENV environment"
+
+        # Simulate database connection setup
+        case "$DB_TYPE" in
+          postgresql)
+            echo "Configuring PostgreSQL connection..."
+            DB_HOST="${ENV}-postgres.company.com"
+            DB_PORT="5432"
+            DB_NAME="${ENV}_database"
+            echo "✓ PostgreSQL connection configured"
+            echo "  - Host: $DB_HOST"
+            echo "  - Port: $DB_PORT"
+            echo "  - Database: $DB_NAME"
+            ;;
+          mysql)
+            echo "Configuring MySQL connection..."
+            DB_HOST="${ENV}-mysql.company.com"
+            DB_PORT="3306"
+            DB_NAME="${ENV}_database"
+            echo "✓ MySQL connection configured"
+            echo "  - Host: $DB_HOST"
+            echo "  - Port: $DB_PORT"
+            echo "  - Database: $DB_NAME"
+            ;;
+          mongodb)
+            echo "Configuring MongoDB connection..."
+            DB_HOST="${ENV}-mongo.company.com"
+            DB_PORT="27017"
+            DB_NAME="${ENV}_database"
+            echo "✓ MongoDB connection configured"
+            echo "  - Host: $DB_HOST"
+            echo "  - Port: $DB_PORT"
+            echo "  - Database: $DB_NAME"
+            ;;
+          redis)
+            echo "Configuring Redis connection..."
+            DB_HOST="${ENV}-redis.company.com"
+            DB_PORT="6379"
+            DB_NAME="0"
+            echo "✓ Redis connection configured"
+            echo "  - Host: $DB_HOST"
+            echo "  - Port: $DB_PORT"
+            echo "  - Database: $DB_NAME"
+            ;;
+          elasticsearch)
+            echo "Configuring Elasticsearch connection..."
+            DB_HOST="${ENV}-elasticsearch.company.com"
+            DB_PORT="9200"
+            DB_NAME="${ENV}_index"
+            echo "✓ Elasticsearch connection configured"
+            echo "  - Host: $DB_HOST"
+            echo "  - Port: $DB_PORT"
+            echo "  - Index: $DB_NAME"
+            ;;
+        esac
+
+        # Test database connectivity
+        echo ""
+        echo "Testing database connectivity..."
+        sleep 2
+        echo "✓ Database connection test successful"
+        echo "✓ Authentication verified"
+        echo "✓ Database permissions confirmed"
+
+        # Store connection details for later steps
+        echo "export DB_HOST='$DB_HOST'" > /tmp/db_details.env
+        echo "export DB_PORT='$DB_PORT'" >> /tmp/db_details.env
+        echo "export DB_NAME='$DB_NAME'" >> /tmp/db_details.env
+        echo "export DB_TYPE='$DB_TYPE'" >> /tmp/db_details.env
+
+        echo ""
+        echo "✓ Database connection setup completed"
+        echo "===================================="
+    - autoSecureInput: 'false'
+      description: Configure Backup Storage
+      passSecureInput: 'false'
+      script: |
+        #!/bin/bash
+        # 04-configure-backup-storage.sh
+        # Configure backup storage location and credentials
+
+        ENV=@option.ENV@
+        DB_TYPE=@option.DB_TYPE@
+        OPERATION=@option.OPERATION@
+        RETENTION_DAYS=@option.RETENTION_DAYS@
+        BACKUP_LOCATION=@option.BACKUP_LOCATION@
+        NOTIFICATION_EMAIL=@option.NOTIFICATION_EMAIL@
+
+        echo "===== Backup Storage Configuration ====="
+        echo "Configuring storage location: $BACKUP_LOCATION"
+
+        case "$BACKUP_LOCATION" in
+          s3-primary)
+            echo "Setting up AWS S3 primary bucket..."
+            STORAGE_PATH="s3://company-backups-primary/${ENV}/${DB_TYPE}"
+            STORAGE_REGION="us-east-1"
+            echo "✓ S3 primary bucket configured"
+            echo "  - Bucket: company-backups-primary"
+            echo "  - Path: ${ENV}/${DB_TYPE}"
+            echo "  - Region: $STORAGE_REGION"
+            ;;
+          s3-secondary)
+            echo "Setting up AWS S3 secondary bucket..."
+            STORAGE_PATH="s3://company-backups-secondary/${ENV}/${DB_TYPE}"
+            STORAGE_REGION="us-west-2"
+            echo "✓ S3 secondary bucket configured"
+            echo "  - Bucket: company-backups-secondary"
+            echo "  - Path: ${ENV}/${DB_TYPE}"
+            echo "  - Region: $STORAGE_REGION"
+            ;;
+          local-storage)
+            echo "Setting up local storage..."
+            STORAGE_PATH="/backups/${ENV}/${DB_TYPE}"
+            echo "✓ Local storage configured"
+            echo "  - Path: $STORAGE_PATH"
+            ;;
+          azure-blob)
+            echo "Setting up Azure Blob storage..."
+            STORAGE_PATH="https://companybackups.blob.core.windows.net/backups/${ENV}/${DB_TYPE}"
+            echo "✓ Azure Blob storage configured"
+            echo "  - Container: backups"
+            echo "  - Path: ${ENV}/${DB_TYPE}"
+            ;;
+        esac
+
+        # Test storage connectivity
+        echo ""
+        echo "Testing storage connectivity..."
+        sleep 1
+        echo "✓ Storage location accessible"
+        echo "✓ Write permissions verified"
+        echo "✓ Storage quota sufficient"
+
+        # Store storage details
+        echo "export STORAGE_PATH='$STORAGE_PATH'" >> /tmp/db_details.env
+        echo "export STORAGE_REGION='${STORAGE_REGION:-local}'" >> /tmp/db_details.env
+
+        echo ""
+        echo "✓ Backup storage configuration completed"
+        echo "======================================="
+    - autoSecureInput: 'false'
+      description: Execute Database Operation
+      passSecureInput: 'false'
+      script: "#!/bin/bash\n# 05-execute-db-operation.sh\n# Execute the specified\
+        \ database operation\n\nENV=@option.ENV@\nDB_TYPE=@option.DB_TYPE@\nOPERATION=@option.OPERATION@\n\
+        RETENTION_DAYS=@option.RETENTION_DAYS@\nBACKUP_LOCATION=@option.BACKUP_LOCATION@\n\
+        NOTIFICATION_EMAIL=@option.NOTIFICATION_EMAIL@\n\n# Load database details\n\
+        if [ -f /tmp/db_details.env ]; then\n  source /tmp/db_details.env\nfi\n\n\
+        echo \"===== Database Operation Execution =====\"\necho \"Executing operation:\
+        \ $OPERATION\"\necho \"Database: $DB_TYPE on $DB_HOST:$DB_PORT\"\necho \"\"\
+        \n\n# Generate operation timestamp and filename\nTIMESTAMP=$(date +%Y%m%d_%H%M%S)\n\
+        BACKUP_FILENAME=\"${ENV}_${DB_TYPE}_${TIMESTAMP}\"\n\ncase \"$OPERATION\"\
+        \ in\n  backup)\n    echo \"Starting database backup...\"\n    echo \"Backup\
+        \ filename: ${BACKUP_FILENAME}.sql\"\n    \n    case \"$DB_TYPE\" in\n   \
+        \   postgresql)\n        echo \"Executing: pg_dump -h $DB_HOST -p $DB_PORT\
+        \ -d $DB_NAME\"\n        sleep 3\n        echo \"✓ PostgreSQL backup completed\"\
+        \n        ;;\n      mysql)\n        echo \"Executing: mysqldump -h $DB_HOST\
+        \ -P $DB_PORT $DB_NAME\"\n        sleep 3\n        echo \"✓ MySQL backup completed\"\
+        \n        ;;\n      mongodb)\n        echo \"Executing: mongodump --host $DB_HOST:$DB_PORT\
+        \ --db $DB_NAME\"\n        sleep 3\n        echo \"✓ MongoDB backup completed\"\
+        \n        ;;\n      redis)\n        echo \"Executing: redis-cli -h $DB_HOST\
+        \ -p $DB_PORT BGSAVE\"\n        sleep 2\n        echo \"✓ Redis backup completed\"\
+        \n        ;;\n      elasticsearch)\n        echo \"Executing: Elasticsearch\
+        \ snapshot API\"\n        sleep 3\n        echo \"✓ Elasticsearch backup completed\"\
+        \n        ;;\n    esac\n    \n    # Simulate backup size calculation\n   \
+        \ BACKUP_SIZE=$(shuf -i 100-5000 -n 1)\n    echo \"✓ Backup size: ${BACKUP_SIZE}MB\"\
+        \n    ;;\n    \n  restore)\n    echo \"Starting database restore...\"\n  \
+        \  echo \"Looking for latest backup file...\"\n    \n    case \"$DB_TYPE\"\
+        \ in\n      postgresql)\n        echo \"Executing: pg_restore -h $DB_HOST\
+        \ -p $DB_PORT -d $DB_NAME\"\n        sleep 4\n        echo \"✓ PostgreSQL\
+        \ restore completed\"\n        ;;\n      mysql)\n        echo \"Executing:\
+        \ mysql -h $DB_HOST -P $DB_PORT $DB_NAME < backup.sql\"\n        sleep 4\n\
+        \        echo \"✓ MySQL restore completed\"\n        ;;\n      mongodb)\n\
+        \        echo \"Executing: mongorestore --host $DB_HOST:$DB_PORT --db $DB_NAME\"\
+        \n        sleep 4\n        echo \"✓ MongoDB restore completed\"\n        ;;\n\
+        \      redis)\n        echo \"Executing: redis-cli -h $DB_HOST -p $DB_PORT\
+        \ FLUSHALL\"\n        echo \"Executing: redis-cli -h $DB_HOST -p $DB_PORT\
+        \ --rdb backup.rdb\"\n        sleep 3\n        echo \"✓ Redis restore completed\"\
+        \n        ;;\n      elasticsearch)\n        echo \"Executing: Elasticsearch\
+        \ restore API\"\n        sleep 4\n        echo \"✓ Elasticsearch restore completed\"\
+        \n        ;;\n    esac\n    ;;\n    \n  backup-and-verify)\n    echo \"Starting\
+        \ backup with verification...\"\n    \n    # Perform backup\n    case \"$DB_TYPE\"\
+        \ in\n      postgresql)\n        echo \"Executing: pg_dump -h $DB_HOST -p\
+        \ $DB_PORT -d $DB_NAME\"\n        sleep 3\n        echo \"✓ PostgreSQL backup\
+        \ completed\"\n        echo \"Verifying backup integrity...\"\n        sleep\
+        \ 2\n        echo \"✓ Backup verification successful\"\n        ;;\n     \
+        \ mysql)\n        echo \"Executing: mysqldump -h $DB_HOST -P $DB_PORT $DB_NAME\"\
+        \n        sleep 3\n        echo \"✓ MySQL backup completed\"\n        echo\
+        \ \"Verifying backup integrity...\"\n        sleep 2\n        echo \"✓ Backup\
+        \ verification successful\"\n        ;;\n      mongodb)\n        echo \"Executing:\
+        \ mongodump --host $DB_HOST:$DB_PORT --db $DB_NAME\"\n        sleep 3\n  \
+        \      echo \"✓ MongoDB backup completed\"\n        echo \"Verifying backup\
+        \ integrity...\"\n        sleep 2\n        echo \"✓ Backup verification successful\"\
+        \n        ;;\n      redis)\n        echo \"Executing: redis-cli -h $DB_HOST\
+        \ -p $DB_PORT BGSAVE\"\n        sleep 2\n        echo \"✓ Redis backup completed\"\
+        \n        echo \"Verifying backup integrity...\"\n        sleep 1\n      \
+        \  echo \"✓ Backup verification successful\"\n        ;;\n      elasticsearch)\n\
+        \        echo \"Executing: Elasticsearch snapshot API\"\n        sleep 3\n\
+        \        echo \"✓ Elasticsearch backup completed\"\n        echo \"Verifying\
+        \ backup integrity...\"\n        sleep 2\n        echo \"✓ Backup verification\
+        \ successful\"\n        ;;\n    esac\n    \n    BACKUP_SIZE=$(shuf -i 100-5000\
+        \ -n 1)\n    echo \"✓ Backup size: ${BACKUP_SIZE}MB\"\n    ;;\nesac\n\n# Store\
+        \ operation details\necho \"export BACKUP_FILENAME='$BACKUP_FILENAME'\" >>\
+        \ /tmp/db_details.env\necho \"export BACKUP_SIZE='${BACKUP_SIZE:-0}'\" >>\
+        \ /tmp/db_details.env\necho \"export OPERATION_TIMESTAMP='$TIMESTAMP'\" >>\
+        \ /tmp/db_details.env\n\necho \"\"\necho \"✓ Database operation completed\
+        \ successfully\"\necho \"========================================\"\n"
+    - autoSecureInput: 'false'
+      description: Upload Backup to Storage
+      passSecureInput: 'false'
+      script: |
+        #!/bin/bash
+        # 06-upload-backup.sh
+        # Upload backup file to configured storage location
+
+        ENV=@option.ENV@
+        DB_TYPE=@option.DB_TYPE@
+        OPERATION=@option.OPERATION@
+        RETENTION_DAYS=@option.RETENTION_DAYS@
+        BACKUP_LOCATION=@option.BACKUP_LOCATION@
+        NOTIFICATION_EMAIL=@option.NOTIFICATION_EMAIL@
+
+        # Load operation details
+        if [ -f /tmp/db_details.env ]; then
+          source /tmp/db_details.env
+        fi
+
+        # Only upload for backup operations
+        if [[ "$OPERATION" == "restore" ]]; then
+          echo "===== Skipping Upload (Restore Operation) ====="
+          echo "No upload required for restore operation"
+          echo "=============================================="
+          exit 0
+        fi
+
+        echo "===== Backup Upload ====="
+        echo "Uploading backup to: $STORAGE_PATH"
+        echo "Backup file: $BACKUP_FILENAME"
+        echo "Backup size: ${BACKUP_SIZE}MB"
+        echo ""
+
+        case "$BACKUP_LOCATION" in
+          s3-primary|s3-secondary)
+            echo "Uploading to AWS S3..."
+            echo "aws s3 cp ${BACKUP_FILENAME}.sql ${STORAGE_PATH}/${BACKUP_FILENAME}.sql"
+            sleep 2
+            echo "✓ Upload to S3 completed"
+            echo "✓ S3 object versioning enabled"
+            echo "✓ Server-side encryption applied"
+            BACKUP_URL="${STORAGE_PATH}/${BACKUP_FILENAME}.sql"
+            ;;
+          local-storage)
+            echo "Copying to local storage..."
+            echo "cp ${BACKUP_FILENAME}.sql ${STORAGE_PATH}/${BACKUP_FILENAME}.sql"
+            sleep 1
+            echo "✓ Local storage copy completed"
+            echo "✓ File permissions set"
+            BACKUP_URL="${STORAGE_PATH}/${BACKUP_FILENAME}.sql"
+            ;;
+          azure-blob)
+            echo "Uploading to Azure Blob Storage..."
+            echo "az storage blob upload --file ${BACKUP_FILENAME}.sql --name ${BACKUP_FILENAME}.sql"
+            sleep 2
+            echo "✓ Upload to Azure Blob completed"
+            echo "✓ Blob encryption enabled"
+            BACKUP_URL="${STORAGE_PATH}/${BACKUP_FILENAME}.sql"
+            ;;
+        esac
+
+        # Verify upload
+        echo ""
+        echo "Verifying upload..."
+        sleep 1
+        echo "✓ Backup file integrity verified"
+        echo "✓ Upload completed successfully"
+        echo "✓ Backup URL: $BACKUP_URL"
+
+        # Store upload details
+        echo "export BACKUP_URL='$BACKUP_URL'" >> /tmp/db_details.env
+
+        echo ""
+        echo "✓ Backup upload completed"
+        echo "========================"
+    - autoSecureInput: 'false'
+      description: Apply Retention Policy
+      passSecureInput: 'false'
+      script: "#!/bin/bash\n# 07-apply-retention-policy.sh\n# Apply retention policy\
+        \ and cleanup old backups\n\nENV=@option.ENV@\nDB_TYPE=@option.DB_TYPE@\n\
+        OPERATION=@option.OPERATION@\nRETENTION_DAYS=@option.RETENTION_DAYS@\nBACKUP_LOCATION=@option.BACKUP_LOCATION@\n\
+        NOTIFICATION_EMAIL=@option.NOTIFICATION_EMAIL@\n\n# Load operation details\n\
+        if [ -f /tmp/db_details.env ]; then\n  source /tmp/db_details.env\nfi\n\n\
+        echo \"===== Retention Policy Application =====\"\necho \"Retention period:\
+        \ $RETENTION_DAYS days\"\necho \"Storage location: $BACKUP_LOCATION\"\necho\
+        \ \"\"\n\n# Calculate cutoff date\nCUTOFF_DATE=$(date -d \"-${RETENTION_DAYS}\
+        \ days\" +%Y%m%d)\necho \"Cleaning up backups older than: $CUTOFF_DATE\"\n\
+        \ncase \"$BACKUP_LOCATION\" in\n  s3-primary|s3-secondary)\n    echo \"Scanning\
+        \ S3 bucket for old backups...\"\n    sleep 1\n    \n    # Simulate finding\
+        \ old backups\n    OLD_BACKUPS=$(shuf -i 0-5 -n 1)\n    if [ $OLD_BACKUPS\
+        \ -gt 0 ]; then\n      echo \"Found $OLD_BACKUPS old backup(s) to delete:\"\
+        \n      for i in $(seq 1 $OLD_BACKUPS); do\n        OLD_DATE=$(date -d \"\
+        -$((RETENTION_DAYS + i)) days\" +%Y%m%d_%H%M%S)\n        echo \"  - ${ENV}_${DB_TYPE}_${OLD_DATE}.sql\"\
+        \n      done\n      echo \"Deleting old backups...\"\n      sleep 1\n    \
+        \  echo \"✓ $OLD_BACKUPS old backup(s) deleted from S3\"\n    else\n     \
+        \ echo \"✓ No old backups found to delete\"\n    fi\n    ;;\n  local-storage)\n\
+        \    echo \"Scanning local storage for old backups...\"\n    sleep 1\n   \
+        \ \n    OLD_BACKUPS=$(shuf -i 0-3 -n 1)\n    if [ $OLD_BACKUPS -gt 0 ]; then\n\
+        \      echo \"Found $OLD_BACKUPS old backup(s) to delete\"\n      echo \"\
+        Deleting old backups...\"\n      sleep 1\n      echo \"✓ $OLD_BACKUPS old\
+        \ backup(s) deleted from local storage\"\n    else\n      echo \"✓ No old\
+        \ backups found to delete\"\n    fi\n    ;;\n  azure-blob)\n    echo \"Scanning\
+        \ Azure Blob storage for old backups...\"\n    sleep 1\n    \n    OLD_BACKUPS=$(shuf\
+        \ -i 0-4 -n 1)\n    if [ $OLD_BACKUPS -gt 0 ]; then\n      echo \"Found $OLD_BACKUPS\
+        \ old backup(s) to delete\"\n      echo \"Deleting old backups...\"\n    \
+        \  sleep 1\n      echo \"✓ $OLD_BACKUPS old backup(s) deleted from Azure Blob\"\
+        \n    else\n      echo \"✓ No old backups found to delete\"\n    fi\n    ;;\n\
+        esac\n\n# Calculate storage savings\nif [ ${OLD_BACKUPS:-0} -gt 0 ]; then\n\
+        \  STORAGE_SAVED=$((OLD_BACKUPS * $(shuf -i 50-500 -n 1)))\n  echo \"✓ Storage\
+        \ space freed: ${STORAGE_SAVED}MB\"\nfi\n\n# Set up automated retention policy\n\
+        echo \"\"\necho \"Configuring automated retention policy...\"\nsleep 1\necho\
+        \ \"✓ Retention policy scheduled\"\necho \"✓ Daily cleanup job configured\"\
+        \necho \"✓ Retention monitoring enabled\"\n\necho \"\"\necho \"✓ Retention\
+        \ policy applied successfully\"\necho \"=====================================\"\
+        \n"
+    - autoSecureInput: 'false'
+      description: Send Notification
+      passSecureInput: 'false'
+      script: "#!/bin/bash\n# 08-send-notification.sh\n# Send operation completion\
+        \ notification\n\nENV=@option.ENV@\nDB_TYPE=@option.DB_TYPE@\nOPERATION=@option.OPERATION@\n\
+        RETENTION_DAYS=@option.RETENTION_DAYS@\nBACKUP_LOCATION=@option.BACKUP_LOCATION@\n\
+        NOTIFICATION_EMAIL=@option.NOTIFICATION_EMAIL@\n\n# Load operation details\n\
+        if [ -f /tmp/db_details.env ]; then\n  source /tmp/db_details.env\nfi\n\n\
+        echo \"===== Notification Service =====\"\necho \"Sending notification to:\
+        \ $NOTIFICATION_EMAIL\"\necho \"Operation: $OPERATION\"\necho \"Status: SUCCESS\"\
+        \necho \"\"\n\n# Prepare notification content\nSUBJECT=\"Database $OPERATION\
+        \ Completed - $ENV $DB_TYPE\"\n\ncase \"$OPERATION\" in\n  backup|backup-and-verify)\n\
+        \  MESSAGE=$(cat << EOF \n  Database backup completed successfully.\n  Environment:\
+        \ $ENV\n  Database Type: $DB_TYPE\n  Operation: $OPERATION\n  Backup Size:\
+        \ ${BACKUP_SIZE:-Unknown}MB\n  Storage Location: $BACKUP_LOCATION\n  Backup\
+        \ URL: ${BACKUP_URL:-N/A}\n  Retention Period: $RETENTION_DAYS days\n  Timestamp:\
+        \ $(date)\n  The backup has been stored securely and is available for restore\
+        \ operations.\nEOF\n)\n;;\n    restore)\n    MESSAGE=$(cat << EOF \n    Database\
+        \ restore completed successfully.\n    Environment: $ENV\n    Database Type:\
+        \ $DB_TYPE\n    Operation: $OPERATION\n    Database Host: $DB_HOST:$DB_PORT\n\
+        \    Database Name: $DB_NAME\n    Timestamp: $(date)\n    The database has\
+        \ been restored and is ready for use.\nEOF\n)\n;;\nesac\n# Simulate sending\
+        \ email notification\necho \"Composing email notification...\"\nsleep 1\n\
+        echo \"Subject: $SUBJECT\"\necho \"\"\necho \"Message preview:\"\necho \"\
+        $MESSAGE\" | head -5\necho \"...\"\necho \"\"\n\n# Send notification\necho\
+        \ \"Sending email notification...\"\nsleep 2\necho \"✓ Email notification\
+        \ sent successfully\"\n\n# Send additional notifications based on environment\n\
+        case \"$ENV\" in\n  prod)\n    echo \"Sending additional production notifications...\"\
+        \n    echo \"✓ Slack notification sent to #database-ops\"\n    echo \"✓ PagerDuty\
+        \ event created\"\n    echo \"✓ Monitoring dashboard updated\"\n    ;;\n \
+        \ staging)\n    echo \"Sending staging environment notifications...\"\n  \
+        \  echo \"✓ Slack notification sent to #staging-ops\"\n    ;;\n  dev)\n  \
+        \  echo \"Sending development environment notifications...\"\n    echo \"✓\
+        \ Development team notified\"\n    ;;\nesac\n\necho \"\"\necho \"✓ All notifications\
+        \ sent successfully\"\necho \"===================================\"\n"
+    - autoSecureInput: 'false'
+      description: Generate Operation Report
+      passSecureInput: 'false'
+      script: |
+        #!/bin/bash
+        # 09-generate-report.sh
+        # Generate comprehensive operation report
+
+        ENV=@option.ENV@
+        DB_TYPE=@option.DB_TYPE@
+        OPERATION=@option.OPERATION@
+        RETENTION_DAYS=@option.RETENTION_DAYS@
+        BACKUP_LOCATION=@option.BACKUP_LOCATION@
+        NOTIFICATION_EMAIL=@option.NOTIFICATION_EMAIL@
+
+        # Load operation details
+        if [ -f /tmp/db_details.env ]; then
+          source /tmp/db_details.env
+        fi
+
+        echo "===== Operation Report Generation ====="
+        echo ""
+        echo "🎉 Database $OPERATION Completed Successfully!"
+        echo ""
+
+        # Operation details section
+        echo "📋 Operation Details:"
+        echo "   Operation Type: $OPERATION"
+        echo "   Database Type: $DB_TYPE"
+        echo "   Environment: $ENV"
+        echo "   Database Host: ${DB_HOST:-N/A}"
+        echo "   Database Port: ${DB_PORT:-N/A}"
+        echo "   Database Name: ${DB_NAME:-N/A}"
+        echo "   Timestamp: ${OPERATION_TIMESTAMP:-$(date +%Y%m%d_%H%M%S)}"
+        echo ""
+
+        if [[ "$OPERATION" != "restore" ]]; then
+          # Backup information
+          echo "💾 Backup Information:"
+          echo "   Backup Filename: ${BACKUP_FILENAME:-N/A}"
+          echo "   Backup Size: ${BACKUP_SIZE:-Unknown}MB"
+          echo "   Storage Location: $BACKUP_LOCATION"
+          echo "   Storage Path: ${STORAGE_PATH:-N/A}"
+          echo "   Backup URL: ${BACKUP_URL:-N/A}"
+          echo "   Retention Period: $RETENTION_DAYS days"
+          echo ""
+        fi
+
+        # Performance metrics
+        echo "📊 Performance Metrics:"
+        case "$OPERATION" in
+          backup|backup-and-verify)
+            DURATION=$(shuf -i 120-1800 -n 1)  # 2-30 minutes
+            THROUGHPUT=$(echo "scale=2; ${BACKUP_SIZE:-100} * 60 / $DURATION" | bc 2>/dev/null || echo "N/A")
+            echo "   Operation Duration: ${DURATION}s"
+            echo "   Backup Throughput: ${THROUGHPUT}MB/min"
+            echo "   Compression Ratio: $(shuf -i 60-85 -n 1)%"
+            ;;
+          restore)
+            DURATION=$(shuf -i 180-2400 -n 1)  # 3-40 minutes
+            echo "   Operation Duration: ${DURATION}s"
+            echo "   Restore Speed: Fast"
+            echo "   Data Integrity: Verified"
+            ;;
+        esac
+        echo ""
+
+        # Storage summary
+        echo "🗄️ Storage Summary:"
+        case "$BACKUP_LOCATION" in
+          s3-primary|s3-secondary)
+            echo "   Storage Type: AWS S3"
+            echo "   Encryption: AES-256"
+            echo "   Versioning: Enabled"
+            echo "   Cross-Region Replication: Enabled"
+            ;;
+          local-storage)
+            echo "   Storage Type: Local Filesystem"
+            echo "   Encryption: At Rest"
+            echo "   Backup Location: ${STORAGE_PATH:-/backups}"
+            ;;
+          azure-blob)
+            echo "   Storage Type: Azure Blob Storage"
+            echo "   Encryption: Microsoft Managed Keys"
+            echo "   Redundancy: LRS"
+            ;;
+        esac
+        echo ""
+
+        # Next steps
+        echo "🚀 Next Steps:"
+        case "$OPERATION" in
+          backup|backup-and-verify)
+            echo "   1. Verify backup integrity if not already done"
+            echo "   2. Test restore procedure in non-production environment"
+            echo "   3. Update backup documentation"
+            echo "   4. Monitor storage usage and costs"
+            echo "   5. Schedule next backup if not automated"
+            ;;
+          restore)
+            echo "   1. Verify application connectivity to database"
+            echo "   2. Run application health checks"
+            echo "   3. Validate data integrity"
+            echo "   4. Update monitoring and alerting"
+            echo "   5. Notify application teams of restore completion"
+            ;;
+        esac
+        echo ""
+
+        # Save operation report
+        cat > /tmp/operation_report.json << 'EOF'
+        {
+          "operation_status": "SUCCESS",
+          "operation_type": "$OPERATION",
+          "database_type": "$DB_TYPE",
+          "environment": "$ENV",
+          "backup_filename": "${BACKUP_FILENAME:-N/A}",
+          "backup_size_mb": "${BACKUP_SIZE:-0}",
+          "storage_location": "$BACKUP_LOCATION",
+          "retention_days": $RETENTION_DAYS,
+          "notification_email": "$NOTIFICATION_EMAIL",
+          "operation_timestamp": "${OPERATION_TIMESTAMP:-$(date +%Y%m%d_%H%M%S)}",
+          "backup_url": "${BACKUP_URL:-N/A}",
+          "duration_seconds": "${DURATION:-0}",
+          "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        }
+        EOF
+
+        echo "✅ Operation report saved to /tmp/operation_report.json"
+        echo "✅ Database $OPERATION completed successfully!"
+        echo "==============================="
+    - autoSecureInput: 'false'
+      description: Job Completion
+      passSecureInput: 'false'
+      script: |
+        #!/bin/bash
+        # 10-job-completion.sh
+        # Final job completion and cleanup
+
+        echo "===== Job Completion ====="
+        echo ""
+
+        # Job execution details
+        echo "📊 Execution Details:"
+        echo "   Rundeck Job ID: db-backup-restore-young"
+        echo "   Execution ID: ${RD_JOB_EXECID:-Unknown}"
+        echo "   Execution Status: SUCCESS ✅"
+        echo "   Start Time: ${RD_JOB_STARTED:-Unknown}"
+        echo "   Completion Time: $(date)"
+        echo "   Total Duration: ${RD_JOB_EXECTIME:-Unknown}"
+        echo "   Executed by: ${RD_JOB_USERNAME:-System}"
+        echo ""
+
+        # Load final operation details
+        if [ -f /tmp/db_details.env ]; then
+          source /tmp/db_details.env
+          echo "🎯 Operation Summary:"
+          echo "   ✅ Database Type: $DB_TYPE"
+          echo "   ✅ Operation: $OPERATION"
+          echo "   ✅ Environment: $ENV"
+          echo "   ✅ Storage Location: $BACKUP_LOCATION"
+          echo "   ✅ Notification: Sent"
+        fi
+        echo ""
+
+        # Cleanup temporary files
+        echo "🧹 Cleanup Operations:"
+        if [ -f /tmp/db_details.env ]; then
+          echo "   ✅ Operation details preserved"
+        fi
+
+        if [ -f /tmp/operation_report.json ]; then
+          echo "   ✅ Operation report saved"
+        fi
+        echo ""
+
+        # Final status
+        echo "🏁 Final Status:"
+        echo "   ✅ All operation tasks completed successfully"
+        echo "   ✅ Database operation executed without errors"
+        echo "   ✅ Notifications sent to stakeholders"
+        echo "   ✅ Reports generated and stored"
+        echo ""
+
+        # Support information
+        echo "📞 Support Information:"
+        echo "   For issues with this operation, contact:"
+        echo "   - Database Team: database@company.com"
+        echo "   - Rundeck Admin: rundeck-admin@company.com"
+        echo "   - Platform Support: platform@company.com"
+        echo ""
+
+        echo "🎉 Thank you for using Rundeck Database Operations!"
+        echo "=========================="
+    keepgoing: false
+    strategy: node-first
+  tags: 'automation,backup,database,restore,rundeck'
+  uuid: db-backup-restore-young

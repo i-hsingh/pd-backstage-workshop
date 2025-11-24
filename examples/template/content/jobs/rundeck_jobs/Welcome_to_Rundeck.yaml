@@ -1,0 +1,93 @@
+- defaultTab: nodes
+  description: 'Welcome to Rundeck! This job offers a fun, interactive experience
+    with three levels of engagement. Choose your adventure!'
+  executionEnabled: true
+  group: Welcome
+  id: 34642a57-55bd-4c63-adbc-7b82c1913d19
+  loglevel: INFO
+  name: Welcome to Rundeck
+  nodeFilterEditable: true
+  nodefilters:
+    dispatch:
+      excludePrecedence: true
+      keepgoing: false
+      rankOrder: ascending
+      successOnEmptyNodeFilter: false
+      threadcount: '1'
+    filter: PDOT.*
+  nodesSelectedByDefault: true
+  options:
+  - description: 'Pick your experience: 1 (Welcome), 2 (Fortune), 3 (Disk Space Alert)'
+    name: level
+    required: true
+    value: '1'
+    values:
+    - '1'
+    - '2'
+    - '3'
+    valuesListDelimiter: ','
+  - description: Your name
+    name: name
+  orchestrator:
+    configuration:
+      count: '1'
+    type: subset
+  plugins:
+    ExecutionLifecycle: {}
+  scheduleEnabled: false
+  schedules: []
+  sequence:
+    commands:
+    - autoSecureInput: 'false'
+      passSecureInput: 'false'
+      script: |
+        #!/bin/bash
+        case @option.level@ in
+          "1")
+            echo "✨ Welcome to Rundeck, @option.name@ ✨"
+            echo
+            echo " _   _      _ _        __        __         _     _ _ "
+            echo "| | | | ___| | | ___   \\ \\      / /__  _ __| | __| | |"
+            echo "| |_| |/ _ \\ | |/ _ \\   \\ \\ /\\ / / _ \\| '__| |/ _\` | |"
+            echo "|  _  |  __/ | | (_) |   \\ V  V / (_) | |  | | (_| |_|"
+            echo "|_| |_|\\___|_|_|\\___/     \\_/\\_/ \\___/|_|  |_|\\__,_(_)"
+            echo
+            echo
+            echo "Let's get started on your Rundeck adventure!"
+            ;;
+          "2")
+            # List fortunes, one per line, and pick one at random
+                fortune=$(printf "%s\n" \
+                  "🍀 Luck is on your side today!" \
+                  "🚀 You will automate something amazing." \
+                  "💡 A bright idea will come to you soon." \
+                  "🎉 Success is just a job run away." \
+                  "🤖 Rundeck thinks you're awesome!" | shuf -n 1 2>/dev/null)
+                # If shuf is not available, fallback to awk
+                if [ -z "$fortune" ]; then
+                  fortune=$(printf "%s\n" \
+                    "🍀 Luck is on your side today!" \
+                    "🚀 You will automate something amazing." \
+                    "💡 A bright idea will come to you soon." \
+                    "🎉 Success is just a job run away." \
+                    "🤖 Rundeck thinks you're awesome!" | awk 'BEGIN{srand()} {a[NR]=$0} END{print a[int(rand()*NR)+1]}')
+                fi
+                echo "Your fortune: $fortune"
+                ;;
+          "3")
+            usage=$(df / | tail -1 | awk '{print $5}' | tr -d '%')
+            if [ "$usage" -lt 70 ]; then
+              echo -e "\033[1;32m🟢 Plenty of disk space: $usage%\033[0m"
+            elif [ "$usage" -lt 90 ]; then
+              echo -e "\033[1;33m🟡 Warning: Disk usage at $usage%\033[0m"
+            else
+              echo -e "\033[1;31m🔴 Danger! Disk usage at $usage%\033[0m"
+            fi
+            ;;
+          *)
+            echo "Please select a valid level: 1 (Welcome), 2 (Fortune), or 3 (Disk Space Alert)."
+            ;;
+        esac
+    keepgoing: false
+    strategy: node-first
+  uuid: 34642a57-55bd-4c63-adbc-7b82c1913d19

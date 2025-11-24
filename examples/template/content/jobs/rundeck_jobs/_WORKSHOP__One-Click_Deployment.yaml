@@ -1,0 +1,247 @@
+- defaultTab: nodes
+  description: |
+    🎯 Learn why Rundeck rocks!
+
+    What you'll do:
+    ✅ Deploy with ONE button click
+    ✅ Auto-rollback if things break
+    ✅ No terminal commands needed!
+
+    Fill in 5 blanks - that's it!
+  executionEnabled: true
+  group: 🎓 Today's Workshop
+  id: workshop
+  loglevel: INFO
+  name: '🚀 WORKSHOP: One-Click Deployment'
+  nodeFilterEditable: true
+  nodefilters:
+    dispatch:
+      excludePrecedence: true
+      keepgoing: false
+      rankOrder: ascending
+      successOnEmptyNodeFilter: false
+      threadcount: '1'
+    filter: 'PDOT.*'
+  nodesSelectedByDefault: true
+  options:
+  - description: Which service?
+    name: service_name
+    required: true
+    value: demo-api
+  - description: 'Which version? (e.g., v1.2.3)'
+    name: version
+    required: true
+    value: v1.0.0
+  plugins:
+    ExecutionLifecycle: {}
+  scheduleEnabled: true
+  schedules: []
+  sequence:
+    commands:
+    - autoSecureInput: 'false'
+      description: 💭 Imagine doing this manually...
+      passSecureInput: 'false'
+      script: |
+        #!/bin/bash
+        echo "=========================================="
+        echo "    THE OLD WAY (Manual Deployment)       "
+        echo "=========================================="
+        echo ""
+        echo "Without Rundeck, you'd need to:"
+        echo "  1. SSH into 5 different servers"
+        echo "  2. Run 20+ kubectl commands"
+        echo "  3. Check logs manually"
+        echo "  4. Pray nothing breaks 🙏"
+        echo "  5. Stay up all night monitoring"
+        echo ""
+        echo "😰 Takes 2 hours, high stress, easy to mess up!"
+        echo ""
+        echo "=========================================="
+        echo "    THE RUNDECK WAY (Automated!)          "
+        echo "=========================================="
+        echo ""
+        echo "Just click ONE button and Rundeck does it all!"
+        echo ""
+        sleep 2
+    - autoSecureInput: 'false'
+      description: 🚀 Deploy new version
+      passSecureInput: 'false'
+      script: |
+        #!/bin/bash
+
+        SERVICE=@option.service_name@
+        VERSION=@option.version@
+
+        echo "=========================================="
+        echo "=== Deploying $SERVICE v$VERSION ==="
+        echo "=========================================="
+        echo ""
+
+        # TODO: Fill in the namespace
+        NAMESPACE="________"
+
+        echo "📦 Target namespace: $NAMESPACE"
+        echo "🐳 Image: myregistry/$SERVICE:$VERSION"
+        echo ""
+
+        # Show what command WOULD run
+        echo "🔧 Running deployment command..."
+        echo "   kubectl set image deployment/$SERVICE \\"
+        echo "     $SERVICE=myregistry/$SERVICE:$VERSION \\"
+        echo "     -n $NAMESPACE"
+        echo ""
+
+        # Simulate deployment
+        sleep 2
+        echo "deployment.apps/$SERVICE image updated"
+        echo ""
+
+        echo "⏳ Waiting for deployment to roll out..."
+        echo "   kubectl rollout status deployment/$SERVICE -n $NAMESPACE --timeout=3m"
+        echo ""
+
+        # Simulate rollout
+        sleep 2
+        echo "Waiting for deployment \"$SERVICE\" rollout to finish..."
+        sleep 1
+        echo "1 of 3 updated replicas are available..."
+        sleep 1
+        echo "2 of 3 updated replicas are available..."
+        sleep 1
+        echo "3 of 3 updated replicas are available..."
+        sleep 1
+        echo "deployment \"$SERVICE\" successfully rolled out"
+        echo ""
+
+        echo "✅ Deployment complete!"
+        echo ""
+    - args: '"'
+      autoSecureInput: 'false'
+      description: 🏥 Check if it's healthy
+      errorhandler:
+        autoSecureInput: 'false'
+        passSecureInput: 'false'
+        script: |
+          #!/bin/bash
+          SERVICE=@option.service_name@
+
+          echo ""
+          echo "=========================================="
+          echo "  ⚠️  MAGIC ROLLBACK ACTIVATED!"
+          echo "=========================================="
+          echo ""
+
+          echo "🔄 Something went wrong! Auto-rollback starting..."
+          echo ""
+
+          echo "🔧 Running rollback command..."
+          echo "   kubectl rollout undo deployment/$SERVICE -n staging"
+          echo ""
+
+          # Simulate rollback
+          sleep 2
+          echo "deployment.apps/$SERVICE rolled back"
+          echo ""
+
+          sleep 1
+          echo "Waiting for rollback to complete..."
+          sleep 1
+          echo "1 of 3 updated replicas are available..."
+          sleep 1
+          echo "2 of 3 updated replicas are available..."
+          sleep 1
+          echo "3 of 3 updated replicas are available..."
+          echo ""
+
+          echo "✅ Rolled back automatically!"
+          echo "🎉 Your users never saw the broken version!"
+          echo "😴 You can sleep peacefully tonight!"
+          echo ""
+          echo "=========================================="
+      passSecureInput: 'false'
+      script: "#!/bin/bash\nSERVICE=@option.service_name@\n\necho \"==========================================\"\
+        \necho \"=== Running Health Checks ===\"\necho \"==========================================\"\
+        \necho \"\"\n\n# TODO: Fill in the expected HTTP code\nEXPECTED_CODE=\"________\"\
+        \n\n# TODO: Fill in max retries\nMAX_RETRIES=\"3\"\n\necho \"🏥 Health check\
+        \ configuration:\"\necho \"   Endpoint: http://$SERVICE.staging/health\"\n\
+        echo \"   Expected code: $EXPECTED_CODE\"\necho \"   Max retries: $MAX_RETRIES\"\
+        \necho \"\"\n\nsleep 2\necho \"⏳ Waiting for service to stabilize (10 seconds)...\"\
+        \nsleep 3\necho \"\"\n\n# Simulate health checks\nfor i in $(seq 1 $MAX_RETRIES);\
+        \ do\n  echo \"🔍 Health check attempt $i/$MAX_RETRIES...\"\n  echo \"   curl\
+        \ -s -o /dev/null -w \\\"%{http_code}\\\" http://$SERVICE.staging/health\"\
+        \n  \n  sleep 2\n  \n  # Simulate success (change to != for rollback demo)\n\
+        \  if [ \"$EXPECTED_CODE\" = \"200\" ]; then\n    HTTP_CODE=\"200\"\n  else\n\
+        \    HTTP_CODE=\"503\"\n  fi\n  \n  echo \"   Response: HTTP $HTTP_CODE\"\n\
+        \  echo \"\"\n  \n  if [ \"$HTTP_CODE\" = \"$EXPECTED_CODE\" ]; then\n   \
+        \ echo \"✅ Health check PASSED!\"\n    echo \"🎉 Service is healthy and responding\
+        \ correctly!\"\n    echo \"\"\n    exit 0\n  fi\n  \n  echo \"⚠️  Attempt\
+        \ $i failed (got $HTTP_CODE, expected $EXPECTED_CODE)\"\n  \n  if [ $i -lt\
+        \ $MAX_RETRIES ]; then\n    echo \"   Retrying in 5 seconds...\"\n    echo\
+        \ \"\"\n    sleep 2\n  fi\ndone\n\necho \"\"\necho \"❌ Health check FAILED\
+        \ after $MAX_RETRIES attempts!\"\necho \"🔄 Triggering automatic rollback...\"\
+        \necho \"\"\nexit 1\n"
+    - autoSecureInput: 'false'
+      description: 🎉 Send victory notification
+      passSecureInput: 'false'
+      script: |
+        #!/bin/bash
+        SERVICE=@option.service_name@
+        VERSION=@option.version@
+
+        echo ""
+        echo "=========================================="
+        echo "=== Sending Notifications ==="
+        echo "=========================================="
+        echo ""
+
+        sleep 1
+
+        cat << EOF
+
+        ✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨
+
+             🎉 DEPLOYMENT COMPLETE! 🎉
+
+        Service:     $SERVICE
+        Version:     $VERSION
+        Environment: staging
+        Time:        $(date '+%Y-%m-%d %H:%M:%S')
+        Deployed by: ${job.username}
+
+        What just happened:
+        ✅ Deployed to staging in seconds
+        ✅ Ran automated health checks
+        ✅ Auto-rollback safety net active
+        ✅ Zero manual commands needed!
+
+        🚀 That's the power of Rundeck!
+
+        ✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨
+
+        EOF
+
+        echo ""
+
+        # TODO: Fill in your Slack channel
+        SLACK_CHANNEL="________"
+
+        echo "📢 Sending notification to Slack..."
+        echo "   Channel: #$SLACK_CHANNEL"
+        echo "   Message: '✅ $SERVICE v$VERSION deployed to staging by ${job.username}'"
+        echo ""
+
+        sleep 1
+        echo "✅ Notification sent!"
+        echo ""
+        echo "🎓 Workshop complete! You just learned:"
+        echo "   • Self-service deployments"
+        echo "   • Automated health checks"
+        echo "   • Automatic rollbacks"
+        echo "   • Zero-stress operations"
+        echo ""
+        echo "Need more input? Ask questions! 💡"
+        echo ""
+    keepgoing: false
+    strategy: node-first
+  user: appadmin
+  uuid: workshop

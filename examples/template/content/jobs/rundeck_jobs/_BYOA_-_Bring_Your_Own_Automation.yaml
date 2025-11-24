@@ -1,0 +1,381 @@
+- defaultTab: nodes
+  description: |
+    🎼 BYOA - Bring Your Own Automation
+
+    Turn YOUR existing automation into an orchestrated workflow!
+
+    What you'll do:
+    ✅ Point to YOUR existing script (any language!)
+    ✅ Add YOUR notification system
+    ✅ Add YOUR error handling
+
+    Rundeck = Orchestrator, not code writer! 🎼
+  executionEnabled: true
+  group: 🎓 Today's Workshop
+  id: byoa-workshop-job
+  loglevel: INFO
+  name: 🎼 BYOA - Bring Your Own Automation
+  nodeFilterEditable: true
+  nodefilters:
+    dispatch:
+      excludePrecedence: true
+      keepgoing: false
+      rankOrder: ascending
+      successOnEmptyNodeFilter: false
+      threadcount: '1'
+    filter: 'PDOT.*'
+  nodesSelectedByDefault: true
+  options:
+  - description: Name of your script (for display purposes)
+    name: script_name
+    required: true
+    value: my_script
+  - description: What does your script do?
+    name: script_purpose
+    required: true
+    value: 'Example: Backup database, Deploy service, Check health'
+  - description: Path to your existing script
+    name: script_path
+    value: /opt/scripts/your_script.sh
+  - description: Script arguments (if any)
+    name: script_args
+  - description: Notification webhook URL (Slack/Teams/etc)
+    name: notification_webhook
+    value: https://hooks.slack.com/services/YOUR/WEBHOOK/HERE
+  - description: Notification channel/recipient
+    name: notification_target
+    value: '#deployments'
+  plugins:
+    ExecutionLifecycle: {}
+  scheduleEnabled: true
+  schedules: []
+  sequence:
+    commands:
+    - autoSecureInput: 'false'
+      description: 🎯 Introduction
+      passSecureInput: 'false'
+      script: |
+        #!/bin/bash
+        echo "=========================================="
+        echo "   🎪 BRING YOUR OWN SCRIPT WORKSHOP"
+        echo "=========================================="
+        echo ""
+        echo "Script Name:    @option.script_name@"
+        echo "Purpose:        @option.script_purpose@"
+        echo "Executed By:    ${job.username}"
+        echo "Timestamp:      $(date)"
+        echo ""
+        echo "🎼 Rundeck will orchestrate YOUR existing script!"
+        echo ""
+        sleep 2
+    - autoSecureInput: 'false'
+      description: 'Step 1: 🔍 Validate Script Exists'
+      passSecureInput: 'false'
+      script: |
+        #!/bin/bash
+        echo "=========================================="
+        echo "Step 1: Validating Script"
+        echo "=========================================="
+        echo ""
+
+        SCRIPT_PATH="@option.script_path@"
+
+        echo "Looking for script at: $SCRIPT_PATH"
+        echo ""
+
+        # TODO: Uncomment when you have a real script
+        # if [ ! -f "$SCRIPT_PATH" ]; then
+        #   echo "❌ Script not found at: $SCRIPT_PATH"
+        #   exit 1
+        # fi
+
+        # if [ ! -x "$SCRIPT_PATH" ]; then
+        #   echo "❌ Script is not executable: $SCRIPT_PATH"
+        #   echo "Run: chmod +x $SCRIPT_PATH"
+        #   exit 1
+        # fi
+
+        echo "✅ Script validation complete!"
+        echo ""
+        echo "NOTE: Uncomment validation checks when you add your real script"
+        echo ""
+    - autoSecureInput: 'false'
+      description: 'Step 2: 🚀 Run YOUR Existing Script'
+      errorhandler:
+        autoSecureInput: 'false'
+        passSecureInput: 'false'
+        script: |
+          #!/bin/bash
+          echo ""
+          echo "=========================================="
+          echo "  ⚠️  ERROR HANDLER TRIGGERED!"
+          echo "=========================================="
+          echo ""
+
+          SCRIPT_NAME="@option.script_name@"
+
+          echo "❌ Script failed: $SCRIPT_NAME"
+          echo "Time: $(date)"
+          echo "User: ${job.username}"
+          echo ""
+
+          # ========================================
+          # TODO: Add YOUR error handling logic
+          # ========================================
+
+          echo "TODO: What should happen on failure?"
+          echo ""
+          echo "Options:"
+          echo "  1. Run a rollback script"
+          echo "     Example: /opt/scripts/rollback.sh"
+          echo ""
+          echo "  2. Page the on-call engineer"
+          echo "     Example: curl PagerDuty API"
+          echo ""
+          echo "  3. Create an incident ticket"
+          echo "     Example: curl Jira/ServiceNow API"
+          echo ""
+          echo "  4. Send urgent notification"
+          echo "     Example: curl Slack with @channel"
+          echo ""
+
+          # Example rollback (customize this!)
+          # echo "Running rollback..."
+          # /opt/scripts/rollback.sh
+
+          # Example PagerDuty alert (customize this!)
+          # curl -X POST https://api.pagerduty.com/incidents \
+          #   -H "Authorization: Token token=YOUR_TOKEN" \
+          #   -d '{"incident":{"type":"incident","title":"Script failed: '$SCRIPT_NAME'"}}'
+
+          echo "=========================================="
+          echo "Add your error handling logic above! ☝️"
+          echo "=========================================="
+          echo ""
+      passSecureInput: 'false'
+      script: |
+        #!/bin/bash
+        echo "=========================================="
+        echo "Step 2: Executing YOUR Script"
+        echo "=========================================="
+        echo ""
+
+        SCRIPT_PATH="@option.script_path@"
+        SCRIPT_ARGS="@option.script_args@"
+        SCRIPT_NAME="@option.script_name@"
+
+        echo "Script:     $SCRIPT_PATH"
+        echo "Arguments:  $SCRIPT_ARGS"
+        echo ""
+
+        # ========================================
+        # TODO: Point to YOUR real script
+        # ========================================
+
+        echo "================================"
+        echo "YOUR SCRIPT GOES HERE!"
+        echo "================================"
+        echo ""
+        echo "TODO: Uncomment and customize:"
+        echo ""
+        echo "# Run your script:"
+        echo "# $SCRIPT_PATH $SCRIPT_ARGS"
+        echo ""
+        echo "# OR if it's a Python script:"
+        echo "# python3 $SCRIPT_PATH $SCRIPT_ARGS"
+        echo ""
+        echo "# OR if it's inline:"
+        echo "# /opt/scripts/backup_database.sh --env prod"
+        echo ""
+
+        # Example: Uncomment and customize this!
+        # echo "Executing: $SCRIPT_PATH $SCRIPT_ARGS"
+        # $SCRIPT_PATH $SCRIPT_ARGS
+        # EXIT_CODE=$?
+
+        # For demo purposes, simulate success
+        EXIT_CODE=0
+
+        echo ""
+        echo "Examples of scripts Rundeck can run:"
+        echo "  ✅ Bash:       /opt/scripts/backup.sh"
+        echo "  ✅ Python:     python3 /usr/local/bin/deploy.py"
+        echo "  ✅ Ruby:       ruby /opt/scripts/check.rb"
+        echo "  ✅ Go:         /usr/local/bin/myapp --flag"
+        echo "  ✅ PowerShell: pwsh /opt/scripts/script.ps1"
+        echo "  ✅ ANY executable or script!"
+        echo ""
+
+        if [ $EXIT_CODE -eq 0 ]; then
+          echo "✅ Script completed successfully!"
+        else
+          echo "❌ Script failed with exit code: $EXIT_CODE"
+          exit $EXIT_CODE
+        fi
+        echo ""
+    - autoSecureInput: 'false'
+      description: 'Step 3: 📊 Capture Results'
+      passSecureInput: 'false'
+      script: |
+        #!/bin/bash
+        echo "=========================================="
+        echo "Step 3: Capturing Results"
+        echo "=========================================="
+        echo ""
+
+        SCRIPT_NAME="@option.script_name@"
+
+        # ========================================
+        # TODO: Capture YOUR script output
+        # ========================================
+
+        echo "TODO: What information do you need to capture?"
+        echo ""
+        echo "Examples:"
+        echo "  - Save output to a file"
+        echo "  - Parse logs for errors"
+        echo "  - Extract metrics"
+        echo "  - Generate report"
+        echo ""
+
+        # Example: Save results
+        # echo "Saving results to /tmp/results.txt"
+        # cat /tmp/script_output.txt > /tmp/results-$(date +%Y%m%d-%H%M%S).txt
+
+        # Example: Parse for specific data
+        # ERRORS=$(grep -c "ERROR" /tmp/script_output.txt)
+        # echo "Found $ERRORS errors"
+
+        echo "Results captured for: $SCRIPT_NAME"
+        echo "Timestamp: $(date)"
+        echo ""
+        echo "✅ Results ready for notification!"
+        echo ""
+    - autoSecureInput: 'false'
+      description: 'Step 4: 📢 Send YOUR Notification'
+      passSecureInput: 'false'
+      script: |
+        #!/bin/bash
+        echo "=========================================="
+        echo "Step 4: Sending Notification"
+        echo "=========================================="
+        echo ""
+
+        SCRIPT_NAME="@option.script_name@"
+        WEBHOOK="@option.notification_webhook@"
+        TARGET="@option.notification_target@"
+
+        # ========================================
+        # TODO: Add YOUR notification system
+        # ========================================
+
+        echo "Notification Target: $TARGET"
+        echo "Webhook URL: $WEBHOOK"
+        echo ""
+
+        echo "================================"
+        echo "YOUR NOTIFICATION GOES HERE!"
+        echo "================================"
+        echo ""
+
+        # ========================================
+        # OPTION 1: Slack Notification
+        # ========================================
+        echo "Option 1: Slack"
+        echo "TODO: Uncomment and add your webhook:"
+        echo ""
+        echo '# SLACK_WEBHOOK="'$WEBHOOK'"'
+        echo '# curl -X POST $SLACK_WEBHOOK \'
+        echo '#   -H "Content-Type: application/json" \'
+        echo '#   -d "{"text":"✅ Script completed: '$SCRIPT_NAME'","channel":"'$TARGET'"}"'
+        echo ""
+
+        # ========================================
+        # OPTION 2: Microsoft Teams
+        # ========================================
+        echo "Option 2: Microsoft Teams"
+        echo "TODO: Uncomment and add your webhook:"
+        echo ""
+        echo '# TEAMS_WEBHOOK="'$WEBHOOK'"'
+        echo '# curl -X POST $TEAMS_WEBHOOK \'
+        echo '#   -H "Content-Type: application/json" \'
+        echo '#   -d "{"text":"✅ Script completed: '$SCRIPT_NAME'"}"'
+        echo ""
+
+        # ========================================
+        # OPTION 3: Email
+        # ========================================
+        echo "Option 3: Email"
+        echo "TODO: Uncomment and customize:"
+        echo ""
+        echo '# echo "Script completed: '$SCRIPT_NAME'" | \'
+        echo '#   mail -s "Rundeck Job Success" '$TARGET
+        echo ""
+
+        # ========================================
+        # OPTION 4: PagerDuty Change Event
+        # ========================================
+        echo "Option 4: PagerDuty Change Event"
+        echo "TODO: Uncomment and add your integration key:"
+        echo ""
+        echo '# curl -X POST https://api.pagerduty.com/change_events \'
+        echo '#   -H "Content-Type: application/json" \'
+        echo '#   -d "{\"routing_key\":\"YOUR_KEY\",\"payload\":{\"summary\":\"'$SCRIPT_NAME' completed\"}}"'
+        echo ""
+
+        # ========================================
+        # OPTION 5: Custom Webhook
+        # ========================================
+        echo "Option 5: Your Custom Webhook"
+        echo "TODO: Add your own webhook call:"
+        echo ""
+        echo '# curl -X POST '$WEBHOOK' \'
+        echo '#   -H "Content-Type: application/json" \'
+        echo '#   -d "{\"script\":\"'$SCRIPT_NAME'\",\"status\":\"success\"}"'
+        echo ""
+
+        echo "================================"
+        echo "Pick one and uncomment it! ☝️"
+        echo "================================"
+        echo ""
+
+        echo "✅ Notification sent (configure above to make it real!)"
+        echo ""
+    - autoSecureInput: 'false'
+      description: 🎉 Workshop Complete!
+      passSecureInput: 'false'
+      script: |
+        #!/bin/bash
+        echo ""
+        echo "✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨"
+        echo ""
+        echo "     🎉 ORCHESTRATION COMPLETE! 🎉"
+        echo ""
+        echo "✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨✨"
+        echo ""
+
+        SCRIPT_NAME="@option.script_name@"
+
+        echo "What you just built:"
+        echo "  ✅ Validation step"
+        echo "  ✅ Execution of YOUR script"
+        echo "  ✅ Results capture"
+        echo "  ✅ Notification system"
+        echo "  ✅ Error handling"
+        echo ""
+        echo "🎼 That's orchestration!"
+        echo ""
+        echo "Next steps:"
+        echo "  1. Add your real script path"
+        echo "  2. Uncomment the script execution"
+        echo "  3. Configure your notification"
+        echo "  4. Test the error handler (make it fail!)"
+        echo "  5. Add scheduling if needed"
+        echo "  6. Share with your team!"
+        echo ""
+        echo "Questions? Need more input? Ask away!"
+        echo ""
+    keepgoing: false
+    strategy: node-first
+  user: appadmin
+  uuid: byoa-workshop-job

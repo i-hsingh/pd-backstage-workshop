@@ -1,0 +1,116 @@
+# Backstage Scaffolder Template for Database Backup and Restore via Rundeck
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: rundeck-database-backup-template-orange
+  title: Database Backup and Restore (Orange)
+  description: Use this template to perform database backup and restore operations for Orange with configurable retention policies and notification settings.
+  tags:
+    - rundeck
+    - database
+    - backup
+    - restore
+spec:
+  owner: user-orange
+  type: rundeck-orchestration
+  parameters:
+    - title: Database Backup and Restore Configuration
+      required:
+        - environment
+        - databaseType
+        - operation
+        - retentionDays
+        - backupLocation
+        - notificationEmail
+      properties:
+        environment:
+          title: Environment
+          type: string
+          description: Target environment for the database operation
+          enum:
+            - dev
+            - staging
+            - prod
+
+        databaseType:
+          title: Database Type
+          type: string
+          description: Type of database to backup or restore
+          enum:
+            - postgresql
+            - mysql
+            - mongodb
+            - redis
+            - elasticsearch
+
+        operation:
+          title: Operation
+          type: string
+          description: Type of database operation to perform
+          enum:
+            - backup
+            - restore
+            - backup-and-verify
+          default: backup
+
+        retentionDays:
+          title: Backup Retention (Days)
+          type: string
+          description: Number of days to retain backup files
+          enum:
+            - "7"
+            - "30"
+            - "90"
+            - "365"
+          default: "30"
+
+        backupLocation:
+          title: Backup Location
+          type: string
+          description: Storage location for backup files
+          enum:
+            - s3-primary
+            - s3-secondary
+            - local-storage
+            - azure-blob
+          default: s3-primary
+
+        notificationEmail:
+          title: Notification Email
+          type: string
+          description: Email address for operation notifications
+          default: userorange@company.com
+
+        waitForJob:
+          title: Wait for completion
+          type: boolean
+          description: Wait for job to complete before finishing
+          default: true
+
+  steps:
+    - id: rundeck-execute
+      name: Execute Database Operation
+      action: rundeck:job:execute
+      input:
+        jobId: db-backup-restore-orange
+        projectName: DATABASE_OPS
+        parameters:
+          ENV: ${{ parameters.environment }}
+          DB_TYPE: ${{ parameters.databaseType }}
+          OPERATION: ${{ parameters.operation }}
+          RETENTION_DAYS: ${{ parameters.retentionDays }}
+          BACKUP_LOCATION: ${{ parameters.backupLocation }}
+          NOTIFICATION_EMAIL: ${{ parameters.notificationEmail }}
+        waitForJob: ${{ parameters.waitForJob }}
+
+  output:
+    links:
+      - title: Rundeck Execution
+        url: ${{ steps['rundeck-execute'].output.executionId }}
+        icon: dashboard
+      - title: Database Monitoring
+        url: https://monitoring.company.com/databases
+        icon: monitoring
+    text:
+      - title: Execution Logs
+        content: ${{ steps['rundeck-execute'].output.logs }}
